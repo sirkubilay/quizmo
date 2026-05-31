@@ -69,7 +69,7 @@ function getClientId() {
   return id;
 }
 
-const SERVER = "http://localhost:3001";
+const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 
 /* ── Bileşen ── */
 export default function ProfilePage() {

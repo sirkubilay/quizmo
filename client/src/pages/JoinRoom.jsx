@@ -2,14 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import { getPlayerName } from "../utils/playerName";
 
 export default function JoinRoom() {
   const navigate = useNavigate();
-  const [playerName] = useState(
-    (localStorage.getItem("quizmo_profile_name") ||
-     localStorage.getItem("playerName") ||
-     "Misafir").trim()
-  );
+  const [playerName] = useState(() => getPlayerName());
   const [roomCode, setRoomCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

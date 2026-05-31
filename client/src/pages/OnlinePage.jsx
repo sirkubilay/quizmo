@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CATEGORY_GROUPS } from "../data/categories";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import { getPlayerName } from "../utils/playerName";
 
 /* ══════════════════════════════
    SABİTLER
@@ -230,11 +231,7 @@ export default function OnlinePage() {
   const navigate = useNavigate();
 
   /* Profil sayfasından kaydedilen isim */
-  const playerName = (
-    localStorage.getItem("quizmo_profile_name") ||
-    localStorage.getItem("playerName") ||
-    "Misafir"
-  ).trim();
+  const playerName = getPlayerName();
 
   const [selectedCatId,   setSelectedCatId]   = useState(null); // null = rastgele
   const [timePerQuestion, setTimePerQuestion]  = useState(20);

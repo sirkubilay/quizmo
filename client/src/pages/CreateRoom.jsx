@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { CATEGORY_GROUPS } from "../data/categories";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import { getPlayerName } from "../utils/playerName";
 
 const arrowBtn = {
   background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)",
@@ -97,11 +98,7 @@ export default function CreateRoom() {
   const location = useLocation();
   const preCategory = location.state?.category || null;
 
-  const [playerName] = useState(
-    (localStorage.getItem("quizmo_profile_name") ||
-     localStorage.getItem("playerName") ||
-     "Misafir").trim()
-  );
+  const [playerName] = useState(() => getPlayerName());
   const [selectedCategory, setSelectedCategory] = useState(preCategory);
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [loading, setLoading] = useState(false);
