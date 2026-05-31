@@ -62,11 +62,16 @@ export async function saveWeeklyScore(playerName, score) {
 
 /* Hafta numarasına göre tekrarlanabilir ama değişken bot skorları */
 const LEADERBOARD_BOTS = [
-  { playerName: "Zeynep",  base: 920 },
-  { playerName: "Emre",    base: 840 },
-  { playerName: "Fatma",   base: 780 },
-  { playerName: "Can",     base: 710 },
-  { playerName: "Selin",   base: 660 },
+  { playerName: "murat41",     base: 920 },
+  { playerName: "busee_99",    base: 840 },
+  { playerName: "tolga2001",   base: 780 },
+  { playerName: "sinem_kayaa", base: 710 },
+  { playerName: "oguz_han26",  base: 660 },
+  { playerName: "ceren_ist34", base: 620 },
+  { playerName: "yusuf_efe06", base: 580 },
+  { playerName: "ayse_nurr",   base: 540 },
+  { playerName: "hakan_v",     base: 500 },
+  { playerName: "yasemin_7",   base: 460 },
 ];
 
 function getBotLeaderboard(week) {

@@ -393,9 +393,6 @@ export default function HomePage() {
                         </div>
                         <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem" }}>
                           {entry.playerName}
-                          {entry.isBot && (
-                            <span style={{ marginLeft: "6px", fontSize: "0.65rem", color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>BOT</span>
-                          )}
                         </div>
                         <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", marginRight: "8px" }}>
                           {entry.gamesPlayed} oyun
