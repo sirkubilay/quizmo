@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(mkdir \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\server\")",
+      "Bash(npm init *)",
+      "Bash(node index.js)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3001/rooms)",
+      "Bash(start *)",
+      "Bash(node *)",
+      "Bash(npx vite *)",
+      "PowerShell(node \"C:/Users/kubil/OneDrive/Masaüstü/bilgi/convert_tip.js\")",
+      "PowerShell(node \"C:/Users/kubil/OneDrive/Masaüstü/bilgi/convert_mitoloji.js\")",
+      "PowerShell(node \"C:/Users/kubil/OneDrive/Masaüstü/bilgi/convert_kimya.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\convert_din_inanc.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\convert_uzay.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\convert_matematik.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\convert_felsefe.js\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\convert_cizgi_filmler.js\")",
+      "Bash(Remove-Item *)",
+      "Bash(copy convert_futbol.js convert_futbol.cjs)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\client\\\\convert_futbol.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\client\\\\convert_biyoloji.cjs\")",
+      "PowerShell(node \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\client\\\\clean_parens.cjs\")",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\kubil\\\\OneDrive\\\\Masaüstü\\\\bilgi\\\\server\" -File | Where-Object { $_.Extension -in '.js','.mjs','.cjs','.ts' } | Select-Object Name)",
+      "Bash(gh *)",
+      "PowerShell(gh *)",
+      "PowerShell(winget install *)",
+      "PowerShell(gh auth *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1)",
+      "PowerShell($env:GH_CONFIG_DIR = \"$env:APPDATA\\\\GitHub CLI\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "PowerShell($env:GH_CONFIG_DIR = \"$env:LOCALAPPDATA\\\\GitHub CLI\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)"
+    ]
+  }
+}
