@@ -1,19 +1,8 @@
 import diziFiimler from "./dizi-filmler.js";
-import genelKultur1 from "./genel-kultur.js";
-import genelKultur2 from "./genel-kultur-2.js";
-import genelKultur3 from "./genel-kultur-3.js";
-import genelKultur4 from "./genel-kultur-4.js";
-import genelKultur5 from "./genel-kultur-5.js";
-import genelKultur6 from "./genel-kultur-6.js";
-import cografya1 from "./cografya-1.js";
-import cografya2 from "./cografya-2.js";
-import cografya3 from "./cografya-3.js";
-import spor1 from "./spor-1.js";
-import spor2 from "./spor-2.js";
-import spor3 from "./spor-3.js";
-import bilim1 from "./bilim-1.js";
-import bilim2 from "./bilim-2.js";
-import bilim3 from "./bilim-3.js";
+import genelKultur from "./genel-kultur.js";
+import cografya from "./cografya.js";
+import spor from "./spor.js";
+import bilim from "./bilim.js";
 import psikoloji1 from "./psikoloji-1.js";
 import hukukSiyaset1 from "./hukuk-siyaset-1.js";
 import mimariYapilar1 from "./mimari-yapilar-1.js";
@@ -47,29 +36,10 @@ import biyoloji1 from "./biyoloji-1.js";
 
 const questionBank = {
   "dizi-filmler": diziFiimler,
-  "genel-kultur": [
-    ...genelKultur1,
-    ...genelKultur2,
-    ...genelKultur3,
-    ...genelKultur4,
-    ...genelKultur5,
-    ...genelKultur6,
-  ],
-  "cografya": [
-    ...cografya1,
-    ...cografya2,
-    ...cografya3,
-  ],
-  "spor": [
-    ...spor1,
-    ...spor2,
-    ...spor3,
-  ],
-  "bilim": [
-    ...bilim1,
-    ...bilim2,
-    ...bilim3,
-  ],
+  "genel-kultur": genelKultur,
+  "cografya": cografya,
+  "spor": spor,
+  "bilim": bilim,
   "psikoloji": [
     ...psikoloji1,
   ],
