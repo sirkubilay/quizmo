@@ -182,7 +182,7 @@ io.on("connection", (socket) => {
   console.log(`✅ Bağlandı: ${socket.id}`);
 
   /* ── Oda oluştur ── */
-  socket.on("create_room", ({ playerName, category, maxPlayers }) => {
+  socket.on("create_room", ({ playerName, category, maxPlayers, avatar }) => {
     let roomCode;
     do { roomCode = generateRoomCode(); } while (rooms[roomCode]);
 
@@ -191,7 +191,7 @@ io.on("connection", (socket) => {
       category,
       maxPlayers:        maxPlayers || 8,
       timePerQuestion:   20,
-      players:           [{ id: socket.id, name: playerName, score: 0, isHost: true, isReady: false }],
+      players:           [{ id: socket.id, name: playerName, score: 0, isHost: true, isReady: false, avatar: avatar || "😊" }],
       status:            "waiting",
       currentQuestion:   0,
       questions:         [],
@@ -206,7 +206,7 @@ io.on("connection", (socket) => {
   });
 
   /* ── Odaya katıl ── */
-  socket.on("join_room", ({ playerName, roomCode }) => {
+  socket.on("join_room", ({ playerName, roomCode, avatar }) => {
     const code = roomCode.toUpperCase().trim();
     const room = rooms[code];
 
@@ -215,7 +215,7 @@ io.on("connection", (socket) => {
     if (room.players.length >= room.maxPlayers) { socket.emit("error", { message: "Oda dolu!" }); return; }
     if (room.players.find(p => p.name === playerName)) { socket.emit("error", { message: "Bu isim zaten kullanılıyor!" }); return; }
 
-    room.players.push({ id: socket.id, name: playerName, score: 0, isHost: false, isReady: false });
+    room.players.push({ id: socket.id, name: playerName, score: 0, isHost: false, isReady: false, avatar: avatar || "😊" });
     socket.join(code);
     socket.roomCode = code;
 
@@ -296,7 +296,7 @@ io.on("connection", (socket) => {
   });
 
   /* ── Rastgele eşleşme: kuyruğa gir ── */
-  socket.on("find_match", ({ playerName, category, timePerQuestion, questionCount }) => {
+  socket.on("find_match", ({ playerName, category, timePerQuestion, questionCount, avatar }) => {
     // Zaten kuyrukta mı?
     if (matchQueue.find(p => p.socketId === socket.id)) return;
 
@@ -322,8 +322,8 @@ io.on("connection", (socket) => {
         timePerQuestion: matchTimePerQuestion,
         questionCount:   matchQuestionCount,
         players: [
-          { id: opponent.socketId, name: opponent.playerName, score: 0, isHost: true,  isReady: true },
-          { id: socket.id,         name: playerName,          score: 0, isHost: false, isReady: true },
+          { id: opponent.socketId, name: opponent.playerName, score: 0, isHost: true,  isReady: true, avatar: opponent.avatar || "😊" },
+          { id: socket.id,         name: playerName,          score: 0, isHost: false, isReady: true, avatar: avatar || "😊" },
         ],
         status:            "waiting",
         currentQuestion:   0,
@@ -350,7 +350,7 @@ io.on("connection", (socket) => {
       console.log(`🎯 Eşleşme: ${opponent.playerName} vs ${playerName} | ${matchCategory} | ${roomCode}`);
     } else {
       // Kuyruğa ekle
-      matchQueue.push({ socketId: socket.id, playerName, category: category || null, timePerQuestion: timePerQuestion || 20, questionCount: questionCount || 10 });
+      matchQueue.push({ socketId: socket.id, playerName, category: category || null, timePerQuestion: timePerQuestion || 20, questionCount: questionCount || 10, avatar: avatar || "😊" });
       socket.emit("match_queued");
       console.log(`⏳ Kuyruğa eklendi: ${playerName} (toplam: ${matchQueue.length})`);
 
@@ -376,8 +376,8 @@ io.on("connection", (socket) => {
           timePerQuestion: matchTimePerQuestion,
           questionCount:   matchQuestionCount,
           players: [
-            { id: socket.id, name: playerName, score: 0, isHost: true,  isReady: true },
-            { id: botId,     name: botName,     score: 0, isHost: false, isReady: true, isBot: true },
+            { id: socket.id, name: playerName, score: 0, isHost: true,  isReady: true, avatar: avatar || "😊" },
+            { id: botId,     name: botName,     score: 0, isHost: false, isReady: true, isBot: true, avatar: "🤖" },
           ],
           status:            "waiting",
           currentQuestion:   0,

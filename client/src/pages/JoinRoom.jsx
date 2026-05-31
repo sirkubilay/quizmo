@@ -7,6 +7,7 @@ import { getPlayerName } from "../utils/playerName";
 export default function JoinRoom() {
   const navigate = useNavigate();
   const [playerName] = useState(() => getPlayerName());
+  const [avatar]     = useState(() => localStorage.getItem("quizmo_profile_avatar") || "😊");
   const [roomCode, setRoomCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +35,7 @@ export default function JoinRoom() {
     if (!roomCode.trim() || roomCode.length < 4) { setError("Geçerli bir oda kodu gir!"); return; }
     setError("");
     setLoading(true);
-    socket.emit("join_room", { playerName: playerName.trim(), roomCode: roomCode.toUpperCase().trim() });
+    socket.emit("join_room", { playerName: playerName.trim(), roomCode: roomCode.toUpperCase().trim(), avatar });
   };
 
   const handleCodeChange = (e) => {

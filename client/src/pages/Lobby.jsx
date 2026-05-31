@@ -8,7 +8,9 @@ import Particles from "../components/Particles";
 export default function Lobby() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { roomCode, isHost } = location.state || {};
+  const { isHost } = location.state || {};
+  // Oda kodunu hem state'ten hem room.code'dan al — tutarsızlık olmasın
+  const roomCode = location.state?.roomCode || location.state?.room?.code || "";
 
   const [players, setPlayers] = useState(location.state?.room?.players || []);
   const [category] = useState(location.state?.room?.category || "");
@@ -68,9 +70,10 @@ export default function Lobby() {
     navigate("/");
   };
 
-  const myPlayer = players.find((p) => p.id === socket.id);
-  const allReady = players.filter((p) => !p.isHost).every((p) => p.isReady);
-  const canStart = isHost && players.length >= 1;
+  const myPlayer     = players.find((p) => p.id === socket.id);
+  const nonHosts     = players.filter((p) => !p.isHost);
+  const allReady     = nonHosts.length > 0 && nonHosts.every((p) => p.isReady);
+  const canStart     = isHost && players.length >= 2 && allReady;
 
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
@@ -242,21 +245,17 @@ export default function Lobby() {
                 }}
               >
                 {/* Avatar */}
-                <div
-                  style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "50%",
-                    background: `linear-gradient(135deg, hsl(${(player.name.charCodeAt(0) * 37) % 360}, 70%, 50%), hsl(${(player.name.charCodeAt(0) * 37 + 60) % 360}, 70%, 40%))`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 800,
-                    fontSize: "1.1rem",
-                    flexShrink: 0,
-                  }}
-                >
-                  {player.name[0].toUpperCase()}
+                <div style={{
+                  width: "42px", height: "42px", borderRadius: "50%", flexShrink: 0,
+                  background: player.avatar
+                    ? "rgba(255,255,255,0.08)"
+                    : `linear-gradient(135deg, hsl(${(player.name.charCodeAt(0) * 37) % 360}, 70%, 50%), hsl(${(player.name.charCodeAt(0) * 37 + 60) % 360}, 70%, 40%))`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: player.avatar ? "1.5rem" : "1.1rem",
+                  fontWeight: 800,
+                  border: player.id === socket.id ? "2px solid rgba(124,58,237,0.5)" : "2px solid rgba(255,255,255,0.08)",
+                }}>
+                  {player.avatar || player.name[0].toUpperCase()}
                 </div>
 
                 <div style={{ flex: 1 }}>
@@ -301,9 +300,11 @@ export default function Lobby() {
                 cursor: canStart ? "pointer" : "not-allowed",
               }}
             >
-              {allReady || players.length === 1
-                ? "🚀 Oyunu Başlat!"
-                : `⏳ Bekleniyor... (${players.filter((p) => !p.isHost && p.isReady).length}/${players.length - 1} hazır)`}
+              {players.length < 2
+                ? "👥 Oyuncu bekleniyor..."
+                : allReady
+                  ? "🚀 Oyunu Başlat!"
+                  : `⏳ Bekleniyor... (${nonHosts.filter(p => p.isReady).length}/${nonHosts.length} hazır)`}
             </button>
           )}
         </div>

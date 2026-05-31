@@ -304,6 +304,7 @@ export default function OnlinePage() {
       category:        selectedCatId,
       timePerQuestion,
       questionCount,
+      avatar: localStorage.getItem("quizmo_profile_avatar") || "😊",
     });
   };
 

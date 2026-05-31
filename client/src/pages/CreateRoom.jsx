@@ -99,6 +99,7 @@ export default function CreateRoom() {
   const preCategory = location.state?.category || null;
 
   const [playerName] = useState(() => getPlayerName());
+  const [avatar]     = useState(() => localStorage.getItem("quizmo_profile_avatar") || "😊");
   const [selectedCategory, setSelectedCategory] = useState(preCategory);
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [loading, setLoading] = useState(false);
@@ -130,6 +131,7 @@ export default function CreateRoom() {
       playerName: playerName.trim(),
       category: selectedCategory.id,
       maxPlayers,
+      avatar,
     });
   };
 

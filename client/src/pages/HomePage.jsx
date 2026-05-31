@@ -329,10 +329,16 @@ export default function HomePage() {
 
                     {/* Kategori detayları */}
                     {entries.length > 0 && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "2px" }}>
-                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.6px" }}>
+                      <div style={{ marginTop: "2px" }}>
+                        <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: "8px" }}>
                           Kategorilere Göre
                         </div>
+                        <div style={{
+                          display: "flex", flexDirection: "column", gap: "8px",
+                          maxHeight: entries.length > 5 ? "230px" : "none",
+                          overflowY: entries.length > 5 ? "auto" : "visible",
+                          paddingRight: entries.length > 5 ? "4px" : "0",
+                        }}>
                         {entries
                           .sort(([, a], [, b]) => (b.correct + b.wrong) - (a.correct + a.wrong))
                           .map(([catId, stat]) => {
@@ -355,6 +361,7 @@ export default function HomePage() {
                               </div>
                             );
                           })}
+                        </div>
                       </div>
                     )}
                   </div>
