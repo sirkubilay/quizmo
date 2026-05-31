@@ -4,6 +4,7 @@ import { CATEGORIES } from "../data/categories";
 import { getQuestions } from "../data/questions/index.js";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import { saveLocalStats, saveWeeklyScore } from "../utils/stats";
 
 // Varsayılan süre — location.state'ten ya da question_start'tan override edilir
 const DEFAULT_TIME = 20;
@@ -353,8 +354,24 @@ export default function MultiplayerGame() {
   /* ─ Oyun sonu ─ */
   const [finalPlayers, setFinalPlayers] = useState([]);
 
-  const timerRef = useRef(null);
-  const myId     = socket.id;
+  /* ─ UI ─ */
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [notification,  setNotification]  = useState("");
+
+  const timerRef   = useRef(null);
+  const correctRef = useRef(0);
+  const wrongRef   = useRef(0);
+  const myId       = socket.id;
+
+  const showNotif = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(""), 3500);
+  };
+
+  const handleExit = () => {
+    socket.disconnect();
+    navigate("/");
+  };
 
   /* ─ Güvenlik yönlendirmesi + matchmaking auto-start ─ */
   useEffect(() => {
@@ -390,6 +407,10 @@ export default function MultiplayerGame() {
 
     socket.on("question_end", ({ correctAnswer: ca, results, players: updatedPlayers, isLast: last }) => {
       clearInterval(timerRef.current);
+      // Doğru/yanlış say
+      const myResult = results.find(r => r.id === socket.id);
+      if (myResult?.correct) correctRef.current++;
+      else if (myResult?.answer) wrongRef.current++;
       setCorrectAnswer(ca);
       setQuestionResults(results);
       setPlayers(updatedPlayers);
@@ -399,8 +420,18 @@ export default function MultiplayerGame() {
 
     socket.on("game_over", ({ players: finalP }) => {
       clearInterval(timerRef.current);
+      // İstatistikleri kaydet
+      const myPlayer = finalP.find(p => p.id === socket.id);
+      if (myPlayer) {
+        saveWeeklyScore(myPlayer.name, myPlayer.score);
+        saveLocalStats(categoryId, correctRef.current, wrongRef.current);
+      }
       setFinalPlayers(finalP);
       setPhase("finished");
+    });
+
+    socket.on("player_left", ({ playerName }) => {
+      showNotif(`${playerName} oyundan ayrıldı 👋`);
     });
 
     return () => {
@@ -408,6 +439,7 @@ export default function MultiplayerGame() {
       socket.off("player_answered");
       socket.off("question_end");
       socket.off("game_over");
+      socket.off("player_left");
     };
   }, []);
 
@@ -441,11 +473,77 @@ export default function MultiplayerGame() {
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
 
+  /* ─ Çıkış modal + bildirim (ortak) ─ */
+  const ExitModal = () => (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 1000,
+      background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+    }}>
+      <div className="glass-card" style={{ padding: "32px", maxWidth: "360px", width: "100%", textAlign: "center" }}>
+        <div style={{ fontSize: "2.8rem", marginBottom: "14px" }}>🚪</div>
+        <h3 style={{ fontWeight: 900, fontSize: "1.2rem", margin: "0 0 10px" }}>Oyundan Çıkılsın mı?</h3>
+        <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.86rem", margin: "0 0 24px" }}>
+          Çıkarsan rakibin otomatik kazanır.
+        </p>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            className="btn-secondary"
+            onClick={() => setShowExitModal(false)}
+            style={{ flex: 1, padding: "12px" }}
+          >
+            İptal
+          </button>
+          <button
+            className="btn-danger"
+            onClick={handleExit}
+            style={{ flex: 1, padding: "12px" }}
+          >
+            Çık
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const Notification = () => notification ? (
+    <div style={{
+      position: "fixed", top: "20px", left: "50%", transform: "translateX(-50%)",
+      background: "rgba(30,20,60,0.95)", backdropFilter: "blur(12px)",
+      border: "1px solid rgba(255,255,255,0.15)", borderRadius: "14px",
+      padding: "12px 24px", fontWeight: 700, fontSize: "0.9rem",
+      zIndex: 900, whiteSpace: "nowrap",
+      animation: "mp-fadein 0.3s ease",
+    }}>
+      {notification}
+    </div>
+  ) : null;
+
+  const ExitBtn = () => (
+    <button
+      onClick={() => setShowExitModal(true)}
+      style={{
+        position: "fixed", top: "18px", right: "18px", zIndex: 800,
+        width: "38px", height: "38px", borderRadius: "50%",
+        background: "rgba(239,68,68,0.15)", border: "1.5px solid rgba(239,68,68,0.35)",
+        color: "#fca5a5", cursor: "pointer", fontSize: "1rem",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transition: "all 0.2s",
+      }}
+      title="Oyundan Çık"
+    >
+      ✕
+    </button>
+  );
+
   /* Countdown */
   if (phase === "countdown") {
     return (
       <div style={{ minHeight: "100vh", position: "relative" }}>
         <Particles />
+        {showExitModal && <ExitModal />}
+        <Notification />
+        <ExitBtn />
         <div style={{ position: "relative", zIndex: 1, maxWidth: "720px", margin: "0 auto", padding: "40px 20px" }}>
           <CountdownPhase />
         </div>
@@ -458,6 +556,7 @@ export default function MultiplayerGame() {
     return (
       <div style={{ minHeight: "100vh", position: "relative" }}>
         <Particles />
+        <Notification />
         <div style={{ position: "relative", zIndex: 1, maxWidth: "680px", margin: "0 auto", padding: "40px 20px 80px" }}>
           <GameOverScreen
             players={finalPlayers}
@@ -474,6 +573,9 @@ export default function MultiplayerGame() {
     return (
       <div style={{ minHeight: "100vh", position: "relative" }}>
         <Particles />
+        {showExitModal && <ExitModal />}
+        <Notification />
+        <ExitBtn />
         <div style={{ position: "relative", zIndex: 1, maxWidth: "680px", margin: "0 auto", padding: "40px 20px 80px" }}>
           {/* Üst bar */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
@@ -538,6 +640,9 @@ export default function MultiplayerGame() {
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
       <Particles />
+      {showExitModal && <ExitModal />}
+      <Notification />
+      <ExitBtn />
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: "720px", margin: "0 auto", padding: "24px 20px 60px" }}>
 

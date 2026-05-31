@@ -15,9 +15,15 @@ const io = new Server(server, {
   cors: { origin: CLIENT_URL, methods: ["GET", "POST"] },
 });
 
-const rooms          = {};
-const questionTimers = {}; // roomCode → setTimeout handle
-const matchQueue     = []; // { socketId, playerName, category }
+const rooms           = {};
+const questionTimers  = {}; // roomCode → setTimeout handle
+const matchQueue      = []; // { socketId, playerName, category }
+const matchBotTimers  = {}; // socketId → setTimeout (15 sn bot tetikleyici)
+const botAnswerTimers = {}; // roomCode → setTimeout (bot cevabı)
+
+const BOT_NAMES = ["Burak", "Ayşe", "Emre", "Fatma", "Can", "Zeynep", "Mert", "Selin", "Berk", "Elif", "Ozan", "Derya"];
+const BOT_ACCURACY_MIN = 0.50; // %50
+const BOT_ACCURACY_MAX = 0.72; // %72
 
 /* ─────────────────────────────────────────────────────────
    YARDIMCI FONKSİYONLAR
@@ -58,6 +64,15 @@ function startQuestion(roomCode, idx) {
 
   // Süre + 1 s tolerans
   questionTimers[roomCode] = setTimeout(() => endQuestion(roomCode, idx), (tpq + 1) * 1000);
+
+  // Bot varsa: rastgele gecikmeyle cevap ver
+  const bot = room.players.find(p => p.isBot);
+  if (bot) {
+    const minDelay = 2.5;
+    const maxDelay = Math.max(tpq - 2, minDelay + 1);
+    const botDelay = (minDelay + Math.random() * (maxDelay - minDelay)) * 1000;
+    botAnswerTimers[roomCode] = setTimeout(() => botAnswer(roomCode), botDelay);
+  }
 }
 
 /* Soruyu bitir: skorları hesapla, sonuçları yayınla, sonraki soruyu planla */
@@ -67,6 +82,8 @@ function endQuestion(roomCode, idx) {
 
   clearTimeout(questionTimers[roomCode]);
   delete questionTimers[roomCode];
+  clearTimeout(botAnswerTimers[roomCode]);
+  delete botAnswerTimers[roomCode];
 
   const q = room.questions[idx];
   if (!q) return;
@@ -117,6 +134,41 @@ function endQuestion(roomCode, idx) {
       io.to(roomCode).emit("game_over", { players: sorted });
       console.log(`🏆 Oyun bitti: ${roomCode}`);
     }, 5_000);
+  }
+}
+
+/* Bot cevabı — startQuestion tarafından gecikmeyle çağrılır */
+function botAnswer(roomCode) {
+  const room = rooms[roomCode];
+  if (!room || room.status !== "playing") return;
+
+  const bot = room.players.find(p => p.isBot);
+  if (!bot || room.answers[bot.id]) return;
+
+  const q = room.questions[room.currentQuestion];
+  if (!q) return;
+
+  // %50-72 doğruluk oranı (her oyun farklı)
+  const accuracy  = BOT_ACCURACY_MIN + Math.random() * (BOT_ACCURACY_MAX - BOT_ACCURACY_MIN);
+  const isCorrect = Math.random() < accuracy;
+  const answer    = isCorrect
+    ? q.answer
+    : q.options.filter(o => o !== q.answer)[Math.floor(Math.random() * (q.options.length - 1))];
+
+  const tpq         = room.timePerQuestion || 20;
+  const elapsed     = (Date.now() - room.questionStartTime) / 1000;
+  const timeLeft    = Math.max(tpq - elapsed, 0);
+  const points      = Math.max(Math.round(timeLeft * 10), 10);
+
+  room.answers[bot.id] = { answer, points };
+
+  const answeredCount = Object.keys(room.answers).length;
+  io.to(roomCode).emit("player_answered", { count: answeredCount, total: room.players.length });
+  console.log(`🤖 Bot cevapladı (${isCorrect ? "✓" : "✗"}): ${roomCode}`);
+
+  if (answeredCount >= room.players.length) {
+    clearTimeout(questionTimers[roomCode]);
+    endQuestion(roomCode, room.currentQuestion);
   }
 }
 
@@ -290,6 +342,50 @@ io.on("connection", (socket) => {
       matchQueue.push({ socketId: socket.id, playerName, category: category || null, timePerQuestion: timePerQuestion || 20 });
       socket.emit("match_queued");
       console.log(`⏳ Kuyruğa eklendi: ${playerName} (toplam: ${matchQueue.length})`);
+
+      // 15 saniyede insan bulunamazsa bot eşleşmesi
+      matchBotTimers[socket.id] = setTimeout(() => {
+        const idx = matchQueue.findIndex(p => p.socketId === socket.id);
+        if (idx === -1) return; // zaten eşleşti
+        matchQueue.splice(idx, 1);
+
+        const matchCategory        = category        || "genel-kultur";
+        const matchTimePerQuestion = timePerQuestion || 20;
+        const botId   = `bot_${Math.random().toString(36).slice(2, 8)}`;
+        const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+
+        let roomCode;
+        do { roomCode = generateRoomCode(); } while (rooms[roomCode]);
+
+        rooms[roomCode] = {
+          code:            roomCode,
+          category:        matchCategory,
+          maxPlayers:      2,
+          timePerQuestion: matchTimePerQuestion,
+          players: [
+            { id: socket.id, name: playerName, score: 0, isHost: true,  isReady: true },
+            { id: botId,     name: botName,     score: 0, isHost: false, isReady: true, isBot: true },
+          ],
+          status:            "waiting",
+          currentQuestion:   0,
+          questions:         [],
+          answers:           {},
+          questionStartTime: null,
+        };
+
+        socket.join(roomCode);
+        socket.roomCode = roomCode;
+
+        io.to(roomCode).emit("match_found", {
+          roomCode,
+          category:        matchCategory,
+          timePerQuestion: matchTimePerQuestion,
+          players:         rooms[roomCode].players,
+          hostId:          socket.id,
+        });
+
+        console.log(`🤖 Bot eşleşmesi: ${playerName} vs ${botName} | ${matchCategory} | ${roomCode}`);
+      }, 15_000);
     }
   });
 
@@ -300,13 +396,17 @@ io.on("connection", (socket) => {
       matchQueue.splice(idx, 1);
       console.log(`❌ Kuyruktan çıktı: ${socket.id}`);
     }
+    clearTimeout(matchBotTimers[socket.id]);
+    delete matchBotTimers[socket.id];
   });
 
   /* ── Bağlantı kesildi ── */
   socket.on("disconnect", () => {
-    // Matchmaking kuyruğundan temizle
+    // Matchmaking kuyruğundan ve bot timer'dan temizle
     const qIdx = matchQueue.findIndex(p => p.socketId === socket.id);
     if (qIdx !== -1) matchQueue.splice(qIdx, 1);
+    clearTimeout(matchBotTimers[socket.id]);
+    delete matchBotTimers[socket.id];
 
     const code = socket.roomCode;
     if (!code || !rooms[code]) return;
@@ -324,6 +424,27 @@ io.on("connection", (socket) => {
       clearTimeout(questionTimers[code]);
       delete questionTimers[code];
       console.log(`🗑️ Oda silindi: ${code}`);
+      return;
+    }
+
+    // Oyun sürerken tek oyuncu/bot kaldıysa
+    if (room.status === "playing" && room.players.length === 1) {
+      clearTimeout(questionTimers[code]);
+      delete questionTimers[code];
+      clearTimeout(botAnswerTimers[code]);
+      delete botAnswerTimers[code];
+
+      if (room.players[0].isBot) {
+        // Sadece bot kaldı — odayı sil, kimseye bildirme
+        delete rooms[code];
+        console.log(`🤖 Bot odası silindi (insan ayrıldı): ${code}`);
+      } else {
+        // Tek insan kaldı — kazandı
+        room.status = "finished";
+        io.to(code).emit("player_left", { playerName: name });
+        io.to(code).emit("game_over", { players: [...room.players] });
+        console.log(`🏆 Rakip ayrıldı, kazanan: ${room.players[0].name} | ${code}`);
+      }
       return;
     }
 

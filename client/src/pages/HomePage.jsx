@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Particles from "../components/Particles";
+import { getLocalStats, getWeeklyTop3 } from "../utils/stats";
+import { CATEGORIES } from "../data/categories";
 
 const MENU_ITEMS = [
   {
@@ -111,7 +113,14 @@ function AltayLogo() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [hovered, setHovered] = useState(null);
+  const [hovered,   setHovered]   = useState(null);
+  const [top3,      setTop3]      = useState([]);
+  const [localStats, setLocalStats] = useState({});
+
+  useEffect(() => {
+    setLocalStats(getLocalStats());
+    getWeeklyTop3().then(setTop3).catch(() => {});
+  }, []);
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
@@ -258,6 +267,80 @@ export default function HomePage() {
               </div>
             );
           })}
+        </div>
+
+        {/* ── İstatistikler ── */}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "14px" }}>
+
+          {/* Haftalık Top 3 */}
+          <div className="glass-card" style={{ padding: "22px 24px" }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "14px" }}>
+              🏆 Bu Hafta En İyi 3
+            </div>
+            {top3.length === 0 ? (
+              <div style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.85rem", textAlign: "center", padding: "8px 0" }}>
+                Henüz bu hafta skor yok
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {top3.map((entry, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: "12px",
+                    padding: "10px 14px", borderRadius: "13px",
+                    background: i === 0 ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${i === 0 ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.07)"}`,
+                  }}>
+                    <div style={{ fontSize: "1.3rem", width: "28px", textAlign: "center" }}>
+                      {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
+                    </div>
+                    <div style={{ flex: 1, fontWeight: 700, fontSize: "0.9rem" }}>{entry.playerName}</div>
+                    <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", marginRight: "8px" }}>
+                      {entry.gamesPlayed} oyun
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: "1rem", color: i === 0 ? "#fcd34d" : "#c084fc" }}>
+                      {entry.totalScore}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Kategori İstatistikleri */}
+          {(() => {
+            const entries = Object.entries(localStats).filter(([, v]) => v.correct + v.wrong > 0);
+            if (entries.length === 0) return null;
+            return (
+              <div className="glass-card" style={{ padding: "22px 24px" }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "14px" }}>
+                  📊 Kategorilere Göre Başarı
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {entries.map(([catId, stat]) => {
+                    const cat  = CATEGORIES.find(c => c.id === catId);
+                    const total = stat.correct + stat.wrong;
+                    const pct  = Math.round((stat.correct / total) * 100);
+                    const barColor = pct >= 70 ? "#10b981" : pct >= 40 ? "#f59e0b" : "#ef4444";
+                    return (
+                      <div key={catId}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "5px" }}>
+                          <span style={{ fontSize: "1rem" }}>{cat?.icon ?? "❓"}</span>
+                          <span style={{ flex: 1, fontWeight: 700, fontSize: "0.85rem" }}>{cat?.name ?? catId}</span>
+                          <span style={{ fontSize: "0.75rem", color: "#6ee7b7", fontWeight: 700 }}>{stat.correct}✓</span>
+                          <span style={{ fontSize: "0.75rem", color: "#fca5a5", fontWeight: 700, margin: "0 6px" }}>{stat.wrong}✗</span>
+                          <span style={{ fontSize: "0.8rem", fontWeight: 900, color: barColor, minWidth: "38px", textAlign: "right" }}>%{pct}</span>
+                        </div>
+                        <div style={{ height: "5px", background: "rgba(255,255,255,0.07)", borderRadius: "3px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: "3px", transition: "width 0.8s ease", boxShadow: `0 0 6px ${barColor}` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
         </div>
 
         {/* ── Footer ── */}

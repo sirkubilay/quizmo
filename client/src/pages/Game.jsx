@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getQuestions } from "../data/questions/index.js";
 import Particles from "../components/Particles";
+import { saveLocalStats } from "../utils/stats";
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
 
@@ -147,6 +148,8 @@ export default function Game() {
   const [timeLeft, setTimeLeft] = useState(TIMER);
   const [score,    setScore]    = useState(0);
   const [finished, setFinished] = useState(false);
+  const correctRef = useRef(0);
+  const wrongRef   = useRef(0);
 
   /* ─ Jokerler ─ */
   // 1) Yarı Yarıya
@@ -172,6 +175,12 @@ export default function Game() {
     setQuestions(qs.map(q => ({ ...q, shuffledOptions: shuffle(q.options) })));
     setLoading(false);
   }, []);
+
+  /* ─ Oyun bitince istatistikleri kaydet ─ */
+  useEffect(() => {
+    if (!finished || !category?.id) return;
+    saveLocalStats(category.id, correctRef.current, wrongRef.current);
+  }, [finished]);
 
   /* ─ Timer ─ */
   const goNext = useCallback(() => {
@@ -242,6 +251,9 @@ export default function Game() {
     if (isCorrect) {
       const pts = Math.max(timeLeft * 10, 10) * (dblPtActive ? 2 : 1);
       setScore(s => s + pts);
+      correctRef.current++;
+    } else {
+      wrongRef.current++;
     }
     setDblPtActive(false);
     goNext();

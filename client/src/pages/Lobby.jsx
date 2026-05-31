@@ -33,7 +33,7 @@ export default function Lobby() {
     });
 
     socket.on("game_started", () => {
-      navigate("/multiplayer-game", { state: { roomCode, category } });
+      navigate("/multiplayer-game", { state: { roomCode, category, isHost, isMatchmaking: false } });
     });
 
     return () => {

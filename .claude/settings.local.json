@@ -36,7 +36,9 @@
       "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
       "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1)",
       "PowerShell($env:GH_CONFIG_DIR = \"$env:APPDATA\\\\GitHub CLI\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
-      "PowerShell($env:GH_CONFIG_DIR = \"$env:LOCALAPPDATA\\\\GitHub CLI\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)"
+      "PowerShell($env:GH_CONFIG_DIR = \"$env:LOCALAPPDATA\\\\GitHub CLI\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" repo view quizmo --json url,name 2>&1)",
+      "WebFetch(domain:quizmo-server.onrender.com)"
     ]
   }
 }

@@ -5,7 +5,11 @@ import Particles from "../components/Particles";
 
 export default function JoinRoom() {
   const navigate = useNavigate();
-  const [playerName, setPlayerName] = useState(localStorage.getItem("playerName") || "");
+  const [playerName] = useState(
+    (localStorage.getItem("quizmo_profile_name") ||
+     localStorage.getItem("playerName") ||
+     "Misafir").trim()
+  );
   const [roomCode, setRoomCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,7 +18,6 @@ export default function JoinRoom() {
     socket.connect();
 
     socket.on("room_joined", ({ roomCode, room }) => {
-      localStorage.setItem("playerName", playerName);
       navigate("/lobby", { state: { roomCode, room, isHost: false } });
     });
 
@@ -110,20 +113,20 @@ export default function JoinRoom() {
             </p>
           </div>
 
-          {/* İsim */}
-          <div className="glass-card" style={{ padding: "24px" }}>
-            <label style={{ display: "block", fontWeight: 700, marginBottom: "10px", fontSize: "0.95rem" }}>
-              👤 Oyuncu Adın
-            </label>
-            <input
-              className="input-field"
-              type="text"
-              placeholder="Adını gir..."
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              maxLength={20}
-              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
-            />
+          {/* İsim gösterimi (salt okunur) */}
+          <div className="glass-card" style={{ padding: "16px 24px", display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "40px", height: "40px", borderRadius: "50%", flexShrink: 0,
+              background: `linear-gradient(135deg, hsl(${(playerName.charCodeAt(0) * 37) % 360}, 70%, 50%), hsl(${(playerName.charCodeAt(0) * 37 + 60) % 360}, 70%, 40%))`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 800, fontSize: "1rem",
+            }}>
+              {playerName[0]?.toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem" }}>{playerName}</div>
+              <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)" }}>Profil adın · Değiştirmek için Profil sayfasına git</div>
+            </div>
           </div>
 
           {/* Hata */}
