@@ -175,25 +175,16 @@ export default function HomePage() {
         </div>
 
         {/* ── Menü Kartları ── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(6, 1fr)",
-            gap: "14px",
-            width: "100%",
-          }}
-        >
+        <div className="home-grid">
           {MENU_ITEMS.map((item, i) => {
             const isHov = hovered === item.id;
-            // 6 items × span 2 = tam 3×2 grid
-            const gridColumn = "span 2";
 
             return (
               <div
                 key={item.id}
                 className="animate-slide-up"
                 style={{
-                  gridColumn,
+                  gridColumn: "span 2",
                   animationDelay: `${0.1 + i * 0.07}s`,
                   opacity: 0,
                 }}

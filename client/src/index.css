@@ -166,3 +166,63 @@ body {
 .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════
+   MOBİL OPTİMİZASYON
+═══════════════════════════════════════ */
+
+/* Tüm interaktif elementlerde tap highlight kaldır */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 300ms gecikmeyi kaldır, çift-tap zoom engelle */
+button, a, [role="button"], label, summary, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* iOS'ta input focus'ta zoom olmayı engelle (≥16px gerekli) */
+input, textarea, select {
+  font-size: max(16px, 1em);
+}
+
+/* iPhone X+ çentik ve home bar için safe area */
+body {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* background gradient'i yukarıya da uzat */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Ana sayfa responsive grid */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 500px) {
+  .home-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+}
+
+/* Dokunmatik cihazlarda scrollbar gizle */
+@media (hover: none) and (pointer: coarse) {
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+}
+
+/* Mobil genel iyileştirmeler */
+@media (max-width: 480px) {
+  .glass-card {
+    border-radius: 16px;
+  }
+
+  .btn-primary, .btn-secondary, .btn-danger {
+    padding: 13px 20px;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+}

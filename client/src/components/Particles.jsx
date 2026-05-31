@@ -16,8 +16,10 @@ export default function Particles() {
     if (!container) return;
 
     const particles = [];
+    const isMobile = window.innerWidth < 640;
+    const count = isMobile ? 10 : 20;
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < count; i++) {
       const el = document.createElement("div");
       const size = Math.random() * 8 + 4;
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];

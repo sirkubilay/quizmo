@@ -604,8 +604,8 @@ export default function MultiplayerGame() {
     <button
       onClick={() => setShowExitModal(true)}
       style={{
-        position: "fixed", top: "18px", right: "18px", zIndex: 800,
-        width: "38px", height: "38px", borderRadius: "50%",
+        position: "fixed", top: "max(18px, env(safe-area-inset-top, 18px))", right: "18px", zIndex: 800,
+        width: "44px", height: "44px", borderRadius: "50%",
         background: "rgba(239,68,68,0.15)", border: "1.5px solid rgba(239,68,68,0.35)",
         color: "#fca5a5", cursor: "pointer", fontSize: "1rem",
         display: "flex", alignItems: "center", justifyContent: "center",

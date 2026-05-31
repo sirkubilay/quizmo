@@ -104,7 +104,7 @@ function ResultScreen({ score, questions, maxScore, category, onRestart, onHome 
   return (
     <div style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <Particles />
-      <div className="glass-card animate-bounce-in" style={{ position: "relative", zIndex: 1, maxWidth: "480px", width: "90%", padding: "52px 44px", textAlign: "center" }}>
+      <div className="glass-card animate-bounce-in" style={{ position: "relative", zIndex: 1, maxWidth: "480px", width: "92%", padding: "clamp(28px, 8vw, 52px) clamp(20px, 6vw, 44px)", textAlign: "center" }}>
         <div style={{ fontSize: "5rem", marginBottom: "10px", filter: "drop-shadow(0 0 20px rgba(255,255,255,0.3))" }}>{emoji}</div>
         <h2 style={{ fontWeight: 900, fontSize: "2rem", marginBottom: "6px", background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{msg}</h2>
         <p style={{ color: "rgba(255,255,255,0.45)", marginBottom: "30px", fontSize: "0.9rem" }}>{category?.icon} {category?.name}</p>
