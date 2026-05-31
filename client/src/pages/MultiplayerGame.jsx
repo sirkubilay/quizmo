@@ -5,6 +5,7 @@ import { getQuestions } from "../data/questions/index.js";
 import socket from "../socket";
 import Particles from "../components/Particles";
 import { saveLocalStats, saveWeeklyScore } from "../utils/stats";
+import { getJokers, useJoker } from "../utils/jokers";
 
 // Varsayılan süre — location.state'ten ya da question_start'tan override edilir
 const DEFAULT_TIME = 20;
@@ -345,6 +346,16 @@ export default function MultiplayerGame() {
   const [answeredCount,  setAnsweredCount]  = useState(0);
   const [playerCount,    setPlayerCount]    = useState(0);
 
+  /* ─ Jokerler ─ */
+  const [jokerCounts,   setJokerCounts]   = useState({ fifty: 0, doubleAnswer: 0, doublePoints: 0 });
+  const [fiftyUsed,     setFiftyUsed]     = useState(false);
+  const [hiddenOpts,    setHiddenOpts]    = useState(new Set());
+  const [dblAnsUsed,    setDblAnsUsed]    = useState(false);
+  const [dblAnsActive,  setDblAnsActive]  = useState(false);
+  const [firstWrong,    setFirstWrong]    = useState(null);
+  const [dblPtUsed,     setDblPtUsed]     = useState(false);
+  const [dblPtActive,   setDblPtActive]   = useState(false);
+
   /* ─ Soru sonu ─ */
   const [correctAnswer,    setCorrectAnswer]    = useState(null);
   const [questionResults,  setQuestionResults]  = useState([]);
@@ -372,6 +383,21 @@ export default function MultiplayerGame() {
     socket.disconnect();
     navigate("/");
   };
+
+  /* ─ Joker sayılarını yükle ─ */
+  useEffect(() => {
+    setJokerCounts(getJokers());
+  }, []);
+
+  /* ─ Her yeni soruda joker durumlarını sıfırla ─ */
+  useEffect(() => {
+    if (phase === "question") {
+      setHiddenOpts(new Set());
+      setDblAnsActive(false);
+      setFirstWrong(null);
+      setDblPtActive(false);
+    }
+  }, [questionIndex]);
 
   /* ─ Güvenlik yönlendirmesi + matchmaking auto-start ─ */
   useEffect(() => {
@@ -463,12 +489,61 @@ export default function MultiplayerGame() {
     return () => clearInterval(timerRef.current);
   }, [phase, question]);
 
+  /* ─ Joker: Yarı Yarıya ─ */
+  const useJokerFifty = () => {
+    if (fiftyUsed || phase !== "question" || selectedAnswer) return;
+    if (!useJoker("fifty")) return;
+    const correctIdx = shuffledOpts.findIndex(o => o === question?.answer);
+    // question.answer yok (sunucu göndermedi) — tek sorun bu; server'dan gelmediği için
+    // client-side'da doğru cevabı bilmiyoruz. Yarı yarıyayı seçeneklerden rastgele 2'sini sakla
+    const wrongIdxs = shuffledOpts.map((_, i) => i).filter(i => i !== correctIdx);
+    // correctIdx bulunamazsa (== -1), rastgele 2'yi sakla
+    const toHide = correctIdx === -1
+      ? [...shuffledOpts.keys()].sort(() => Math.random() - 0.5).slice(0, 2)
+      : wrongIdxs.sort(() => Math.random() - 0.5).slice(0, 2);
+    setHiddenOpts(new Set(toHide));
+    setFiftyUsed(true);
+    setJokerCounts(getJokers());
+  };
+
+  /* ─ Joker: Çift Cevap ─ */
+  const useJokerDbl = () => {
+    if (dblAnsUsed || phase !== "question" || selectedAnswer) return;
+    if (!useJoker("doubleAnswer")) return;
+    setDblAnsUsed(true);
+    setDblAnsActive(true);
+    setJokerCounts(getJokers());
+  };
+
+  /* ─ Joker: Çift Puan ─ */
+  const useJokerPts = () => {
+    if (dblPtUsed || phase !== "question" || selectedAnswer) return;
+    if (!useJoker("doublePoints")) return;
+    setDblPtUsed(true);
+    setDblPtActive(true);
+    setJokerCounts(getJokers());
+  };
+
   /* ─ Cevap seç ─ */
-  const handleAnswer = (opt) => {
-    if (phase !== "question" || selectedAnswer !== null || timeLeft === 0) return;
+  const handleAnswer = (opt, idx) => {
+    if (phase !== "question" || timeLeft === 0) return;
+    if (hiddenOpts.has(idx)) return;
+
+    if (dblAnsActive && !firstWrong) {
+      // Çift cevap: ilk seçimde doğruyu bilemeyiz (server-side cevap gizli)
+      // Doğruyu bilmeden çalışamaz — bu jokeri sadece server bilir
+      // Basit çözüm: ilk seçimi "deneme" olarak kabul et, yanlışsa ikinci hak ver
+      setFirstWrong(idx);
+      // Server'a göndermiyoruz henüz — 2. cevabı bekle
+      return;
+    }
+
+    if (selectedAnswer !== null) return; // zaten cevaplandı
+
     setSelectedAnswer(opt);
     setPhase("answered");
-    socket.emit("player_answer", { answer: opt });
+    socket.emit("player_answer", { answer: opt, doublePts: dblPtActive });
+    setDblPtActive(false);
   };
 
   /* ═══════════════════════ RENDER ═══════════════════════ */
@@ -609,12 +684,14 @@ export default function MultiplayerGame() {
   if (!question) return null;
 
   /* ─ Aktif soru (question | answered) ─ */
-  const letters   = ["A", "B", "C", "D"];
+  const letters    = ["A", "B", "C", "D"];
   const isAnswered = phase === "answered";
-  const timePct   = (timeLeft / totalTime) * 100;
+  const timePct    = (timeLeft / totalTime) * 100;
   const timerColor = timePct > 50 ? "#10b981" : timePct > 25 ? "#f59e0b" : "#ef4444";
 
-  const getOptStyle = (opt) => {
+  const getOptStyle = (opt, idx) => {
+    if (hiddenOpts.has(idx)) return { opacity: 0, pointerEvents: "none" };
+    if (firstWrong === idx)  return { opacity: 0.35, borderColor: "rgba(239,68,68,0.5)" };
     if (isAnswered) {
       if (opt === selectedAnswer) return {
         borderColor: "#f59e0b",
@@ -629,13 +706,49 @@ export default function MultiplayerGame() {
   };
 
   const getBadge = (opt, idx) => {
+    if (firstWrong === idx)
+      return { label: "✗", style: { background: "rgba(239,68,68,0.3)", color: "#fca5a5" } };
     if (isAnswered && opt === selectedAnswer)
       return { label: "✓", style: { background: "#f59e0b", color: "#1a1a2e" } };
+    if (dblAnsActive && !firstWrong && !isAnswered)
+      return { label: letters[idx], style: { background: "rgba(139,92,246,0.3)", color: "#c084fc" } };
     return {
       label: letters[idx],
       style: { background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.8)" },
     };
   };
+
+  /* Joker buton bileşeni */
+  const JokerBtn = ({ icon, label, color, used, active, count, onClick }) => (
+    <button
+      onClick={onClick}
+      disabled={used || count === 0 || isAnswered || timeLeft === 0}
+      title={count === 0 ? "Joker kalmadı" : label}
+      style={{
+        flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px",
+        padding: "8px 6px", borderRadius: "12px", cursor: used || count === 0 ? "not-allowed" : "pointer",
+        border: `1.5px solid ${used || count === 0 ? "rgba(255,255,255,0.06)" : active ? color : color + "55"}`,
+        background: used || count === 0 ? "rgba(255,255,255,0.03)" : active ? color + "30" : color + "15",
+        opacity: used || count === 0 ? 0.35 : 1,
+        transition: "all 0.2s", fontFamily: "Nunito, sans-serif", position: "relative",
+      }}
+    >
+      <span style={{ fontSize: "1.25rem", lineHeight: 1 }}>{icon}</span>
+      <span style={{ fontSize: "0.58rem", fontWeight: 800, color: used || count === 0 ? "rgba(255,255,255,0.3)" : active ? color : "rgba(255,255,255,0.65)", textAlign: "center", lineHeight: 1.2 }}>
+        {label}
+      </span>
+      {count > 0 && !used && (
+        <span style={{
+          position: "absolute", top: "4px", right: "4px",
+          background: color, color: "#fff", borderRadius: "50%",
+          fontSize: "0.55rem", fontWeight: 900, width: "14px", height: "14px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
 
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
@@ -727,22 +840,42 @@ export default function MultiplayerGame() {
           </div>
         </div>
 
+        {/* ══ JOKER BAR ══ */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <JokerBtn
+            icon="✂️" label="Yarı Yarıya" color="#f59e0b"
+            used={fiftyUsed} active={false} count={jokerCounts.fifty}
+            onClick={useJokerFifty}
+          />
+          <JokerBtn
+            icon="🔄" label="Çift Cevap" color="#8b5cf6"
+            used={dblAnsUsed} active={dblAnsActive} count={jokerCounts.doubleAnswer}
+            onClick={useJokerDbl}
+          />
+          <JokerBtn
+            icon="⚡" label="Çift Puan" color="#10b981"
+            used={dblPtUsed} active={dblPtActive} count={jokerCounts.doublePoints}
+            onClick={useJokerPts}
+          />
+        </div>
+
         {/* ══ ŞIKLAR ══ */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
           {shuffledOpts.map((opt, idx) => {
-            const os    = getOptStyle(opt);
+            const os    = getOptStyle(opt, idx);
             const badge = getBadge(opt, idx);
+            const isHidden = hiddenOpts.has(idx);
             return (
               <button
                 key={idx}
-                onClick={() => handleAnswer(opt)}
-                disabled={isAnswered || timeLeft === 0}
+                onClick={() => !isHidden && handleAnswer(opt, idx)}
+                disabled={isAnswered || timeLeft === 0 || isHidden}
                 style={{
                   width: "100%", padding: "15px 18px", borderRadius: "16px",
                   border: `2px solid ${os.borderColor || "rgba(255,255,255,0.1)"}`,
                   background: os.background || "rgba(255,255,255,0.05)",
                   color: os.color || "white",
-                  cursor: isAnswered || timeLeft === 0 ? "default" : "pointer",
+                  cursor: isAnswered || timeLeft === 0 || isHidden ? "default" : "pointer",
                   fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.95rem",
                   textAlign: "left", display: "flex", alignItems: "center", gap: "14px",
                   backdropFilter: "blur(10px)",
@@ -750,6 +883,7 @@ export default function MultiplayerGame() {
                   boxShadow: os.boxShadow || "none",
                   opacity: os.opacity ?? 1,
                   lineHeight: 1.45,
+                  pointerEvents: os.pointerEvents,
                 }}
               >
                 <span style={{

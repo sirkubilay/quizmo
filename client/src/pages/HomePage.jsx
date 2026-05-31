@@ -309,7 +309,16 @@ export default function HomePage() {
           {/* Kategori İstatistikleri */}
           {(() => {
             const entries = Object.entries(localStats).filter(([, v]) => v.correct + v.wrong > 0);
-            if (entries.length === 0) return null;
+            if (entries.length === 0) return (
+              <div className="glass-card" style={{ padding: "22px 24px", textAlign: "center" }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "10px" }}>
+                  📊 Kategorilere Göre Başarı
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.83rem" }}>
+                  Oyun oynadıkça istatistiklerin burada görünecek
+                </div>
+              </div>
+            );
             return (
               <div className="glass-card" style={{ padding: "22px 24px" }}>
                 <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "14px" }}>

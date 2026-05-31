@@ -255,7 +255,7 @@ io.on("connection", (socket) => {
   });
 
   /* ── Oyuncu cevap verdi ── */
-  socket.on("player_answer", ({ answer }) => {
+  socket.on("player_answer", ({ answer, doublePts }) => {
     const code = socket.roomCode;
     if (!code || !rooms[code]) return;
 
@@ -267,7 +267,8 @@ io.on("connection", (socket) => {
     const tpq          = room.timePerQuestion || 20;
     const elapsed      = (Date.now() - room.questionStartTime) / 1000;
     const serverTimeLeft = Math.max(tpq - elapsed, 0);
-    const points       = Math.max(Math.round(serverTimeLeft * 10), 10);
+    let   points       = Math.max(Math.round(serverTimeLeft * 10), 10);
+    if (doublePts) points = Math.min(points * 2, 400); // Çift Puan jokeri
 
     room.answers[socket.id] = { answer, points };
 
