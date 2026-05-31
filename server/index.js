@@ -20,6 +20,7 @@ const questionTimers  = {}; // roomCode → setTimeout handle
 const matchQueue      = []; // { socketId, playerName, category }
 const matchBotTimers  = {}; // socketId → setTimeout (15 sn bot tetikleyici)
 const botAnswerTimers = {}; // roomCode → setTimeout (bot cevabı)
+const rematchVotes    = {}; // roomCode → Set<socketId>
 
 const BOT_NAMES = ["Burak", "Ayşe", "Emre", "Fatma", "Can", "Zeynep", "Mert", "Selin", "Berk", "Elif", "Ozan", "Derya"];
 const BOT_ACCURACY_MIN = 0.50; // %50
@@ -403,6 +404,56 @@ io.on("connection", (socket) => {
     }
   });
 
+  /* ── Yeniden oyna oylaması ── */
+  socket.on("want_rematch", () => {
+    const code = socket.roomCode;
+    if (!code || !rooms[code]) return;
+    const room = rooms[code];
+    if (room.status !== "finished") return;
+
+    if (!rematchVotes[code]) rematchVotes[code] = new Set();
+    rematchVotes[code].add(socket.id);
+
+    const humanPlayers = room.players.filter(p => !p.isBot);
+    const count = rematchVotes[code].size;
+    const total = humanPlayers.length;
+
+    io.to(code).emit("rematch_vote_update", { count, total });
+
+    if (count >= total) {
+      delete rematchVotes[code];
+      room.players.forEach(p => { p.score = 0; p.isReady = true; });
+      room.status   = "waiting";
+      room.currentQuestion = 0;
+      room.answers  = {};
+      io.to(code).emit("rematch_ready");
+      console.log(`🔄 Rematch: ${code}`);
+    }
+  });
+
+  /* ── Yeniden bağlanma (oyundan düşme) ── */
+  socket.on("rejoin_room", ({ roomCode: rc, playerName }) => {
+    const code = (rc || "").toUpperCase().trim();
+    if (!code || !rooms[code]) { socket.emit("error", { message: "Oda artık mevcut değil." }); return; }
+    const room = rooms[code];
+    const player = room.players.find(p => p.name === playerName);
+    if (!player) return;
+
+    const oldId = player.id;
+    player.id = socket.id;
+    socket.join(code);
+    socket.roomCode = code;
+
+    if (room.answers[oldId]) {
+      room.answers[socket.id] = room.answers[oldId];
+      delete room.answers[oldId];
+    }
+
+    socket.emit("rejoined", { room, status: room.status, currentQuestion: room.currentQuestion });
+    io.to(code).emit("players_updated", { players: room.players });
+    console.log(`🔄 ${playerName} yeniden bağlandı: ${code}`);
+  });
+
   /* ── Eşleşme aramasını iptal et ── */
   socket.on("cancel_match", () => {
     const idx = matchQueue.findIndex(p => p.socketId === socket.id);
@@ -421,6 +472,12 @@ io.on("connection", (socket) => {
     if (qIdx !== -1) matchQueue.splice(qIdx, 1);
     clearTimeout(matchBotTimers[socket.id]);
     delete matchBotTimers[socket.id];
+
+    // Rematch oylarından temizle
+    for (const code of Object.keys(rematchVotes)) {
+      rematchVotes[code].delete(socket.id);
+      if (rematchVotes[code].size === 0) delete rematchVotes[code];
+    }
 
     const code = socket.roomCode;
     if (!code || !rooms[code]) return;

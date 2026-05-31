@@ -211,7 +211,7 @@ function QuestionResults({ correctAnswer, results, players, myId, isLast }) {
 /* ══════════════════════════════
    GAME OVER / FİNAL SIRALAMASI
 ══════════════════════════════ */
-function GameOverScreen({ players, myId, onHome }) {
+function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematchInfo }) {
   const sorted  = [...players].sort((a, b) => b.score - a.score);
   const myRank  = sorted.findIndex(p => p.id === myId) + 1;
   const myP     = sorted.find(p => p.id === myId);
@@ -304,10 +304,26 @@ function GameOverScreen({ players, myId, onHome }) {
         </div>
       </div>
 
+      {/* Yeniden Oyna */}
+      {onRematch && (
+        <button
+          className="btn-primary"
+          onClick={onRematch}
+          disabled={rematchVoted}
+          style={{ padding: "16px", fontSize: "1rem", opacity: rematchVoted ? 0.7 : 1 }}
+        >
+          {rematchVoted
+            ? rematchInfo
+              ? `⏳ ${rematchInfo.count}/${rematchInfo.total} hazır…`
+              : "⏳ Bekleniyor…"
+            : "🔄 Yeniden Oyna"}
+        </button>
+      )}
+
       <button
-        className="btn-primary"
+        className="btn-secondary"
         onClick={onHome}
-        style={{ padding: "16px", fontSize: "1rem" }}
+        style={{ padding: "14px", fontSize: "0.95rem" }}
       >
         🏠 Ana Menüye Dön
       </button>
@@ -365,6 +381,10 @@ export default function MultiplayerGame() {
   /* ─ Oyun sonu ─ */
   const [finalPlayers, setFinalPlayers] = useState([]);
 
+  /* ─ Rematch ─ */
+  const [rematchVoted, setRematchVoted] = useState(false);
+  const [rematchInfo,  setRematchInfo]  = useState(null); // { count, total }
+
   /* ─ UI ─ */
   const [showExitModal, setShowExitModal] = useState(false);
   const [notification,  setNotification]  = useState("");
@@ -410,6 +430,20 @@ export default function MultiplayerGame() {
       socket.emit("start_game", { questions });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ─ Yeniden bağlanma (oyundan düşme koruması) ─ */
+  useEffect(() => {
+    const playerName = (localStorage.getItem("quizmo_profile_name") || "").trim()
+      || `Misafir${localStorage.getItem("quizmo_guest_id") || ""}`;
+
+    const onReconnect = () => {
+      if (roomCode) {
+        socket.emit("rejoin_room", { roomCode, playerName });
+      }
+    };
+    socket.on("connect", onReconnect);
+    return () => socket.off("connect", onReconnect);
+  }, [roomCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─ Socket dinleyicileri ─ */
   useEffect(() => {
@@ -460,18 +494,51 @@ export default function MultiplayerGame() {
       showNotif(`${playerName} oyundan ayrıldı 👋`);
     };
 
-    socket.on("question_start",  onQuestionStart);
-    socket.on("player_answered", onPlayerAnswered);
-    socket.on("question_end",    onQuestionEnd);
-    socket.on("game_over",       onGameOver);
-    socket.on("player_left",     onPlayerLeft);
+    const onRematchVoteUpdate = ({ count, total }) => {
+      setRematchInfo({ count, total });
+    };
+
+    const onRematchReady = () => {
+      // Tüm state'i sıfırla, countdown'a dön
+      clearInterval(timerRef.current);
+      setPhase("countdown");
+      setQuestion(null);
+      setShuffledOpts([]);
+      setQuestionIndex(0);
+      setSelectedAnswer(null);
+      setAnsweredCount(0);
+      setCorrectAnswer(null);
+      setQuestionResults([]);
+      setFinalPlayers([]);
+      setIsLast(false);
+      setRematchVoted(false);
+      setRematchInfo(null);
+      correctRef.current = 0;
+      wrongRef.current   = 0;
+
+      // Host yeni soruları gönderir
+      if (isHost) {
+        const questions = getQuestions(categoryId, null, initQCount || 10);
+        socket.emit("start_game", { questions });
+      }
+    };
+
+    socket.on("question_start",       onQuestionStart);
+    socket.on("player_answered",      onPlayerAnswered);
+    socket.on("question_end",         onQuestionEnd);
+    socket.on("game_over",            onGameOver);
+    socket.on("player_left",          onPlayerLeft);
+    socket.on("rematch_vote_update",  onRematchVoteUpdate);
+    socket.on("rematch_ready",        onRematchReady);
 
     return () => {
-      socket.off("question_start",  onQuestionStart);
-      socket.off("player_answered", onPlayerAnswered);
-      socket.off("question_end",    onQuestionEnd);
-      socket.off("game_over",       onGameOver);
-      socket.off("player_left",     onPlayerLeft);
+      socket.off("question_start",       onQuestionStart);
+      socket.off("player_answered",      onPlayerAnswered);
+      socket.off("question_end",         onQuestionEnd);
+      socket.off("game_over",            onGameOver);
+      socket.off("player_left",          onPlayerLeft);
+      socket.off("rematch_vote_update",  onRematchVoteUpdate);
+      socket.off("rematch_ready",        onRematchReady);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -632,6 +699,11 @@ export default function MultiplayerGame() {
     );
   }
 
+  const handleRematch = () => {
+    setRematchVoted(true);
+    socket.emit("want_rematch");
+  };
+
   /* Oyun bitti */
   if (phase === "finished") {
     return (
@@ -643,6 +715,9 @@ export default function MultiplayerGame() {
             players={finalPlayers}
             myId={myId}
             onHome={() => { socket.disconnect(); navigate("/"); }}
+            onRematch={handleRematch}
+            rematchVoted={rematchVoted}
+            rematchInfo={rematchInfo}
           />
         </div>
       </div>
