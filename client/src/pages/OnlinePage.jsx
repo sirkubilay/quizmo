@@ -8,9 +8,16 @@ import Particles from "../components/Particles";
    SABİTLER
 ══════════════════════════════ */
 const TIME_OPTIONS = [
-  { value: 15, label: "15 sn", icon: "⚡", desc: "Hızlı",     color: "#ef4444" },
-  { value: 20, label: "20 sn", icon: "🎯", desc: "Standart",  color: "#f59e0b" },
-  { value: 30, label: "30 sn", icon: "🧠", desc: "Rahat",     color: "#10b981" },
+  { value: 15, label: "15 sn", icon: "⚡", color: "#ef4444" },
+  { value: 20, label: "20 sn", icon: "🎯", color: "#f59e0b" },
+  { value: 30, label: "30 sn", icon: "🧠", color: "#10b981" },
+];
+
+const QUESTION_OPTIONS = [
+  { value: 5,  label: "5",  icon: "🔥", color: "#ef4444" },
+  { value: 10, label: "10", icon: "🎯", color: "#f59e0b" },
+  { value: 15, label: "15", icon: "📚", color: "#6366f1" },
+  { value: 20, label: "20", icon: "🧠", color: "#10b981" },
 ];
 
 const arrowBtn = {
@@ -231,6 +238,7 @@ export default function OnlinePage() {
 
   const [selectedCatId,   setSelectedCatId]   = useState(null); // null = rastgele
   const [timePerQuestion, setTimePerQuestion]  = useState(20);
+  const [questionCount,   setQuestionCount]    = useState(10);
   const [uiState,         setUiState]          = useState("idle"); // idle | searching | found
   const [elapsed,         setElapsed]          = useState(0);
   const [foundPlayers,    setFoundPlayers]     = useState(null);
@@ -250,7 +258,7 @@ export default function OnlinePage() {
       elapsedTimer.current = setInterval(() => setElapsed(e => e + 1), 1000);
     });
 
-    socket.on("match_found", ({ roomCode, category, timePerQuestion: tpq, players, hostId }) => {
+    socket.on("match_found", ({ roomCode, category, timePerQuestion: tpq, questionCount: qc, players, hostId }) => {
       clearInterval(elapsedTimer.current);
       setFoundPlayers(players);
       setUiState("found");
@@ -264,6 +272,7 @@ export default function OnlinePage() {
             roomCode,
             category,
             timePerQuestion: tpq,
+            questionCount:   qc,
             isMatchmaking:   true,
             isHost:          socket.id === hostId,
           },
@@ -297,6 +306,7 @@ export default function OnlinePage() {
       playerName,
       category:        selectedCatId,
       timePerQuestion,
+      questionCount,
     });
   };
 
@@ -414,35 +424,71 @@ export default function OnlinePage() {
               />
             ))}
 
-            {/* Soru Başına Süre */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "4px", marginBottom: "16px" }}>
-              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
-                ⏱ Süre
-              </span>
-              <div style={{ display: "flex", gap: "7px", flex: 1 }}>
-                {TIME_OPTIONS.map(opt => {
-                  const active = timePerQuestion === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => setTimePerQuestion(opt.value)}
-                      style={{
-                        flex: 1, padding: "7px 8px", borderRadius: "10px",
-                        border: `1.5px solid ${active ? opt.color : "rgba(255,255,255,0.1)"}`,
-                        background: active ? `${opt.color}20` : "rgba(255,255,255,0.04)",
-                        color: active ? opt.color : "rgba(255,255,255,0.45)",
-                        cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 800,
-                        fontSize: "0.78rem", transition: "all 0.18s",
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
-                        boxShadow: active ? `0 0 12px ${opt.color}35` : "none",
-                      }}
-                    >
-                      <span style={{ fontSize: "0.88rem" }}>{opt.icon}</span>
-                      <span>{opt.label}</span>
-                    </button>
-                  );
-                })}
+            {/* Soru Başına Süre + Soru Sayısı */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px", marginBottom: "16px" }}>
+
+              {/* Süre */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap", minWidth: "52px" }}>
+                  ⏱ Süre
+                </span>
+                <div style={{ display: "flex", gap: "7px", flex: 1 }}>
+                  {TIME_OPTIONS.map(opt => {
+                    const active = timePerQuestion === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setTimePerQuestion(opt.value)}
+                        style={{
+                          flex: 1, padding: "7px 8px", borderRadius: "10px",
+                          border: `1.5px solid ${active ? opt.color : "rgba(255,255,255,0.1)"}`,
+                          background: active ? `${opt.color}20` : "rgba(255,255,255,0.04)",
+                          color: active ? opt.color : "rgba(255,255,255,0.45)",
+                          cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 800,
+                          fontSize: "0.78rem", transition: "all 0.18s",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+                          boxShadow: active ? `0 0 12px ${opt.color}35` : "none",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.88rem" }}>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Soru Sayısı */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap", minWidth: "52px" }}>
+                  ❓ Soru
+                </span>
+                <div style={{ display: "flex", gap: "7px", flex: 1 }}>
+                  {QUESTION_OPTIONS.map(opt => {
+                    const active = questionCount === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setQuestionCount(opt.value)}
+                        style={{
+                          flex: 1, padding: "7px 8px", borderRadius: "10px",
+                          border: `1.5px solid ${active ? opt.color : "rgba(255,255,255,0.1)"}`,
+                          background: active ? `${opt.color}20` : "rgba(255,255,255,0.04)",
+                          color: active ? opt.color : "rgba(255,255,255,0.45)",
+                          cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 800,
+                          fontSize: "0.78rem", transition: "all 0.18s",
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: "5px",
+                          boxShadow: active ? `0 0 12px ${opt.color}35` : "none",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.88rem" }}>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
             {/* Hata */}

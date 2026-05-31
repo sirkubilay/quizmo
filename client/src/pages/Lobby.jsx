@@ -32,8 +32,10 @@ export default function Lobby() {
       showNotification(`${newHost} artık oda sahibi 👑`);
     });
 
-    socket.on("game_started", () => {
-      navigate("/multiplayer-game", { state: { roomCode, category, isHost, isMatchmaking: false } });
+    socket.on("game_started", ({ timePerQuestion, questionCount }) => {
+      navigate("/multiplayer-game", {
+        state: { roomCode, category, isHost, isMatchmaking: false, timePerQuestion, questionCount },
+      });
     });
 
     return () => {

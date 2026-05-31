@@ -328,7 +328,7 @@ function GameOverScreen({ players, myId, onHome }) {
 export default function MultiplayerGame() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { roomCode, category: categoryId, isMatchmaking, isHost, timePerQuestion: initTime } = location.state || {};
+  const { roomCode, category: categoryId, isMatchmaking, isHost, timePerQuestion: initTime, questionCount: initQCount } = location.state || {};
 
   const catData = CATEGORIES.find(c => c.id === categoryId);
 
@@ -406,14 +406,16 @@ export default function MultiplayerGame() {
     // Matchmaking modunda host soruları seçer ve oyunu başlatır
     // (Lobby yok, kullanıcı buton tıklamaz — otomatik)
     if (isMatchmaking && isHost) {
-      const questions = getQuestions(categoryId, null, 10);
+      const questions = getQuestions(categoryId, null, initQCount || 10);
       socket.emit("start_game", { questions });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─ Socket dinleyicileri ─ */
   useEffect(() => {
-    socket.on("question_start", ({ question: q, index, total, timeLimit }) => {
+    if (!socket.connected) socket.connect();
+
+    const onQuestionStart = ({ question: q, index, total, timeLimit }) => {
       clearInterval(timerRef.current);
       setQuestion(q);
       setShuffledOpts(fisherYates(q.options));
@@ -424,16 +426,15 @@ export default function MultiplayerGame() {
       setSelectedAnswer(null);
       setAnsweredCount(0);
       setPhase("question");
-    });
+    };
 
-    socket.on("player_answered", ({ count, total }) => {
+    const onPlayerAnswered = ({ count, total }) => {
       setAnsweredCount(count);
       setPlayerCount(total);
-    });
+    };
 
-    socket.on("question_end", ({ correctAnswer: ca, results, players: updatedPlayers, isLast: last }) => {
+    const onQuestionEnd = ({ correctAnswer: ca, results, players: updatedPlayers, isLast: last }) => {
       clearInterval(timerRef.current);
-      // Doğru/yanlış say
       const myResult = results.find(r => r.id === socket.id);
       if (myResult?.correct) correctRef.current++;
       else if (myResult?.answer) wrongRef.current++;
@@ -442,11 +443,10 @@ export default function MultiplayerGame() {
       setPlayers(updatedPlayers);
       setIsLast(last);
       setPhase("results");
-    });
+    };
 
-    socket.on("game_over", ({ players: finalP }) => {
+    const onGameOver = ({ players: finalP }) => {
       clearInterval(timerRef.current);
-      // İstatistikleri kaydet
       const myPlayer = finalP.find(p => p.id === socket.id);
       if (myPlayer) {
         saveWeeklyScore(myPlayer.name, myPlayer.score);
@@ -454,20 +454,26 @@ export default function MultiplayerGame() {
       }
       setFinalPlayers(finalP);
       setPhase("finished");
-    });
+    };
 
-    socket.on("player_left", ({ playerName }) => {
+    const onPlayerLeft = ({ playerName }) => {
       showNotif(`${playerName} oyundan ayrıldı 👋`);
-    });
+    };
+
+    socket.on("question_start",  onQuestionStart);
+    socket.on("player_answered", onPlayerAnswered);
+    socket.on("question_end",    onQuestionEnd);
+    socket.on("game_over",       onGameOver);
+    socket.on("player_left",     onPlayerLeft);
 
     return () => {
-      socket.off("question_start");
-      socket.off("player_answered");
-      socket.off("question_end");
-      socket.off("game_over");
-      socket.off("player_left");
+      socket.off("question_start",  onQuestionStart);
+      socket.off("player_answered", onPlayerAnswered);
+      socket.off("question_end",    onQuestionEnd);
+      socket.off("game_over",       onGameOver);
+      socket.off("player_left",     onPlayerLeft);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─ Geri sayım zamanlayıcısı ─ */
   useEffect(() => {

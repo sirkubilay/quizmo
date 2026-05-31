@@ -80,6 +80,8 @@ function endQuestion(roomCode, idx) {
   const room = rooms[roomCode];
   if (!room || room.currentQuestion !== idx) return; // zaten bitti
 
+  room.currentQuestion = -1; // çifte tetiklemeyi engelle
+
   clearTimeout(questionTimers[roomCode]);
   delete questionTimers[roomCode];
   clearTimeout(botAnswerTimers[roomCode]);
@@ -241,13 +243,18 @@ io.on("connection", (socket) => {
     const room = rooms[code];
     const host = room.players.find(p => p.id === socket.id);
     if (!host?.isHost) return;
+    if (room.status === "playing") return; // çifte tetiklemeye karşı koruma
 
     // Soruları kaydet, skorları sıfırla
     room.questions = Array.isArray(questions) ? questions : [];
     room.players.forEach(p => { p.score = 0; });
     room.status = "playing";
 
-    io.to(code).emit("game_started", { category: room.category });
+    io.to(code).emit("game_started", {
+      category:        room.category,
+      timePerQuestion: room.timePerQuestion,
+      questionCount:   room.questions.length,
+    });
     console.log(`🎮 Oyun başladı: ${code} | ${room.questions.length} soru`);
 
     // 3 s sonra ilk soru (istemci countdown ile eş zamanlı)
@@ -289,7 +296,7 @@ io.on("connection", (socket) => {
   });
 
   /* ── Rastgele eşleşme: kuyruğa gir ── */
-  socket.on("find_match", ({ playerName, category, timePerQuestion }) => {
+  socket.on("find_match", ({ playerName, category, timePerQuestion, questionCount }) => {
     // Zaten kuyrukta mı?
     if (matchQueue.find(p => p.socketId === socket.id)) return;
 
@@ -299,9 +306,10 @@ io.on("connection", (socket) => {
     if (opponentIdx !== -1) {
       const opponent = matchQueue.splice(opponentIdx, 1)[0];
 
-      // Kategori ve süre: kuyruğa giren ilk oyuncunun (host) ayarları geçerli
-      const matchCategory       = opponent.category        || category        || "genel-kultur";
+      // Kategori, süre ve soru sayısı: ilk kuyruğa girenin (host) ayarları geçerli
+      const matchCategory        = opponent.category        || category        || "genel-kultur";
       const matchTimePerQuestion = opponent.timePerQuestion || timePerQuestion || 20;
+      const matchQuestionCount   = opponent.questionCount   || questionCount   || 10;
 
       // Oda oluştur (zaten "playing" olarak başlar, lobby yok)
       let roomCode;
@@ -312,11 +320,12 @@ io.on("connection", (socket) => {
         category:        matchCategory,
         maxPlayers:      2,
         timePerQuestion: matchTimePerQuestion,
+        questionCount:   matchQuestionCount,
         players: [
           { id: opponent.socketId, name: opponent.playerName, score: 0, isHost: true,  isReady: true },
           { id: socket.id,         name: playerName,          score: 0, isHost: false, isReady: true },
         ],
-        status:            "waiting", // start_game gelince "playing" olacak
+        status:            "waiting",
         currentQuestion:   0,
         questions:         [],
         answers:           {},
@@ -333,6 +342,7 @@ io.on("connection", (socket) => {
         roomCode,
         category:        matchCategory,
         timePerQuestion: matchTimePerQuestion,
+        questionCount:   matchQuestionCount,
         players:         rooms[roomCode].players,
         hostId:          opponent.socketId,
       });
@@ -340,7 +350,7 @@ io.on("connection", (socket) => {
       console.log(`🎯 Eşleşme: ${opponent.playerName} vs ${playerName} | ${matchCategory} | ${roomCode}`);
     } else {
       // Kuyruğa ekle
-      matchQueue.push({ socketId: socket.id, playerName, category: category || null, timePerQuestion: timePerQuestion || 20 });
+      matchQueue.push({ socketId: socket.id, playerName, category: category || null, timePerQuestion: timePerQuestion || 20, questionCount: questionCount || 10 });
       socket.emit("match_queued");
       console.log(`⏳ Kuyruğa eklendi: ${playerName} (toplam: ${matchQueue.length})`);
 
@@ -352,6 +362,7 @@ io.on("connection", (socket) => {
 
         const matchCategory        = category        || "genel-kultur";
         const matchTimePerQuestion = timePerQuestion || 20;
+        const matchQuestionCount   = questionCount   || 10;
         const botId   = `bot_${Math.random().toString(36).slice(2, 8)}`;
         const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
 
@@ -363,6 +374,7 @@ io.on("connection", (socket) => {
           category:        matchCategory,
           maxPlayers:      2,
           timePerQuestion: matchTimePerQuestion,
+          questionCount:   matchQuestionCount,
           players: [
             { id: socket.id, name: playerName, score: 0, isHost: true,  isReady: true },
             { id: botId,     name: botName,     score: 0, isHost: false, isReady: true, isBot: true },
@@ -381,11 +393,12 @@ io.on("connection", (socket) => {
           roomCode,
           category:        matchCategory,
           timePerQuestion: matchTimePerQuestion,
+          questionCount:   matchQuestionCount,
           players:         rooms[roomCode].players,
           hostId:          socket.id,
         });
 
-        console.log(`🤖 Bot eşleşmesi: ${playerName} vs ${botName} | ${matchCategory} | ${roomCode}`);
+        console.log(`🤖 Bot eşleşmesi: ${playerName} vs ${botName} | ${matchCategory} | ${matchQuestionCount}s | ${roomCode}`);
       }, 15_000);
     }
   });
