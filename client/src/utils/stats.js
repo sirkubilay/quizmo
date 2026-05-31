@@ -62,24 +62,24 @@ export async function saveWeeklyScore(playerName, score) {
 
 /* Hafta numarasına göre tekrarlanabilir ama değişken bot skorları */
 const LEADERBOARD_BOTS = [
-  { playerName: "murat41",     base: 920 },
-  { playerName: "busee_99",    base: 840 },
-  { playerName: "tolga2001",   base: 780 },
-  { playerName: "sinem_kayaa", base: 710 },
-  { playerName: "oguz_han26",  base: 660 },
-  { playerName: "ceren_ist34", base: 620 },
-  { playerName: "yusuf_efe06", base: 580 },
-  { playerName: "ayse_nurr",   base: 540 },
-  { playerName: "hakan_v",     base: 500 },
-  { playerName: "yasemin_7",   base: 460 },
+  { playerName: "murat41",     base: 13400, gamesBase: 22 },
+  { playerName: "busee_99",    base: 11200, gamesBase: 18 },
+  { playerName: "tolga2001",   base: 9600,  gamesBase: 15 },
+  { playerName: "sinem_kayaa", base: 8100,  gamesBase: 13 },
+  { playerName: "oguz_han26",  base: 6700,  gamesBase: 11 },
+  { playerName: "ceren_ist34", base: 5400,  gamesBase: 9  },
+  { playerName: "yusuf_efe06", base: 4200,  gamesBase: 7  },
+  { playerName: "ayse_nurr",   base: 3100,  gamesBase: 5  },
+  { playerName: "hakan_v",     base: 2200,  gamesBase: 4  },
+  { playerName: "yasemin_7",   base: 1400,  gamesBase: 3  },
 ];
 
 function getBotLeaderboard(week) {
   const wn = parseInt(week.split("-W")[1]) || 1;
   return LEADERBOARD_BOTS.map((b, i) => ({
     playerName:  b.playerName,
-    totalScore:  b.base + ((wn * (i * 13 + 7)) % 180) - 90,
-    gamesPlayed: 4 + ((wn * (i + 3)) % 6),
+    totalScore:  b.base + Math.round(((wn * (i * 137 + 31)) % 20 - 10) * b.base / 100),
+    gamesPlayed: b.gamesBase + ((wn * (i + 3)) % 5),
     week,
     isBot:       true,
   }));
