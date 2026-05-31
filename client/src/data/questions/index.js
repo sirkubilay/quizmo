@@ -173,18 +173,34 @@ function stratifiedSample(pool, count) {
     hard:   fisherYates(pool.filter(q => q.difficulty === "hard")),
   };
   const base = Math.floor(count / 3);
-  const rem  = count % 3; // 0, 1 ya da 2
+  const rem  = count % 3;
 
-  const picked = [
-    ...buckets.easy  .slice(0, base + (rem > 0 ? 1 : 0)),
-    ...buckets.medium.slice(0, base + (rem > 1 ? 1 : 0)),
-    ...buckets.hard  .slice(0, base),
-  ];
+  const wantEasy   = base + (rem > 0 ? 1 : 0);
+  const wantMedium = base + (rem > 1 ? 1 : 0);
+  const wantHard   = base;
 
-  // Herhangi bir zorluk seviyesi yetersizse diğerlerinden tamamla
+  const pickedEasy   = buckets.easy  .slice(0, wantEasy);
+  const pickedHard   = buckets.hard  .slice(0, wantHard);
+
+  // Zor soru yetmediyse eksik kısmı ortadan tamamla
+  const hardShortfall = wantHard - pickedHard.length;
+  const usedHardIds   = new Set(pickedHard.map(q => q.id ?? q.question));
+  const extraFromMed  = hardShortfall > 0
+    ? buckets.medium.filter(q => !usedHardIds.has(q.id ?? q.question)).slice(0, hardShortfall)
+    : [];
+
+  const mediumNeeded = wantMedium + hardShortfall - extraFromMed.length;
+  const usedIds      = new Set([...pickedEasy, ...pickedHard, ...extraFromMed].map(q => q.id ?? q.question));
+  const pickedMedium = buckets.medium
+    .filter(q => !usedIds.has(q.id ?? q.question))
+    .slice(0, mediumNeeded);
+
+  const picked = [...pickedEasy, ...pickedMedium, ...extraFromMed, ...pickedHard];
+
+  // Hâlâ eksikse (kolay/orta da bitmişse) kalan havuzdan tamamla
   if (picked.length < count) {
-    const used = new Set(picked.map(q => q.id ?? q.question));
-    const rest = fisherYates(pool.filter(q => !used.has(q.id ?? q.question)));
+    const allUsed = new Set(picked.map(q => q.id ?? q.question));
+    const rest = fisherYates(pool.filter(q => !allUsed.has(q.id ?? q.question)));
     picked.push(...rest.slice(0, count - picked.length));
   }
 
