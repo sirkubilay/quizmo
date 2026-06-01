@@ -437,13 +437,12 @@ export default function ProfilePage() {
   const [avatar, setAvatar] = useState(() => localStorage.getItem("quizmo_profile_avatar") || "😊");
 
   const [nameStatus, setNameStatus] = useState("idle");
-  const [saveState,  setSaveState ] = useState("idle");
 
   const debounceRef = useRef(null);
 
   const checkName = useCallback((val) => {
     const trimmed = val.trim();
-    if (!trimmed) { setNameStatus("idle");  return; }
+    if (!trimmed) { setNameStatus("idle"); return; }
     if (trimmed.length < 2) { setNameStatus("short"); return; }
 
     setNameStatus("checking");
@@ -456,11 +455,27 @@ export default function ProfilePage() {
           { signal: AbortSignal.timeout(4000) }
         );
         const data = await res.json();
-        setNameStatus(data.available ? "available" : "taken");
+        if (data.available) {
+          // Otomatik kaydet
+          await fetch(`${SERVER}/register-username`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: trimmed, clientId }),
+            signal: AbortSignal.timeout(4000),
+          }).catch(() => {});
+          localStorage.setItem("quizmo_profile_name", trimmed);
+          setNameStatus("saved");
+          setTimeout(() => setNameStatus("idle"), 2000);
+        } else {
+          setNameStatus("taken");
+        }
       } catch {
-        setNameStatus("available");
+        // Sunucu yoksa yine de yerel kaydet
+        localStorage.setItem("quizmo_profile_name", val.trim());
+        setNameStatus("saved");
+        setTimeout(() => setNameStatus("idle"), 2000);
       }
-    }, 600);
+    }, 800);
   }, []);
 
   useEffect(() => {
@@ -468,54 +483,21 @@ export default function ProfilePage() {
     return () => clearTimeout(debounceRef.current);
   }, [name, checkName]);
 
-  async function handleSave() {
-    const trimmed = name.trim();
-    if (!trimmed || nameStatus === "taken" || nameStatus === "short") return;
-
-    setSaveState("saving");
-    const clientId = getClientId();
-
-    try {
-      const res  = await fetch(`${SERVER}/register-username`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed, clientId }),
-        signal: AbortSignal.timeout(4000),
-      });
-      const data = await res.json();
-      if (!data.success && data.reason === "taken") {
-        setNameStatus("taken");
-        setSaveState("error");
-        setTimeout(() => setSaveState("idle"), 2500);
-        return;
-      }
-    } catch {}
-
-    localStorage.setItem("quizmo_profile_name", trimmed);
-    setSaveState("done");
-    setTimeout(() => setSaveState("idle"), 2200);
-  }
-
-  const currentMeta  = getAvatarMeta(avatar);
-  const isPremium    = checkPremium(avatar);
+  const currentMeta = getAvatarMeta(avatar);
+  const isPremium   = checkPremium(avatar);
 
   const nameStatusColor = {
-    available: "#10b981", taken: "#ef4444", checking: "#f59e0b",
-    short: "#f59e0b", idle: "transparent",
+    saved:    "#10b981", taken: "#ef4444", checking: "#f59e0b",
+    short:    "#f59e0b", idle:  "transparent",
   }[nameStatus];
 
   const nameStatusText = {
-    available: "✅ Kullanıcı adı müsait",
-    taken:     "❌ Bu kullanıcı adı alınmış",
-    checking:  "⏳ Kontrol ediliyor...",
-    short:     "⚠️ En az 2 karakter gir",
-    idle:      "",
+    saved:    "✅ Kaydedildi",
+    taken:    "❌ Bu kullanıcı adı alınmış",
+    checking: "⏳ Kontrol ediliyor...",
+    short:    "⚠️ En az 2 karakter gir",
+    idle:     "",
   }[nameStatus];
-
-  const canSave = name.trim().length >= 2
-    && nameStatus !== "taken"
-    && nameStatus !== "short"
-    && saveState !== "saving";
 
   const TABS = [
     { id: "profil",       label: "👤 Profil"     },
@@ -723,34 +705,6 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            {/* Kaydet */}
-            <button
-              onClick={handleSave}
-              disabled={!canSave}
-              style={{
-                width: "100%", padding: "16px", borderRadius: "16px", border: "none",
-                background:
-                  saveState === "done"  ? "linear-gradient(135deg, #10b981, #059669)"
-                  : saveState === "error" ? "linear-gradient(135deg, #ef4444, #dc2626)"
-                  : !canSave             ? "rgba(255,255,255,0.08)"
-                  :                        "linear-gradient(135deg, #7c3aed, #6366f1)",
-                color: !canSave ? "rgba(255,255,255,0.3)" : "white",
-                fontSize: "1.05rem", fontWeight: 800,
-                cursor: canSave ? "pointer" : "not-allowed",
-                transition: "all 0.3s ease",
-                boxShadow:
-                  saveState === "done"  ? "0 8px 30px rgba(16,185,129,0.4)"
-                  : saveState === "error" ? "0 8px 30px rgba(239,68,68,0.3)"
-                  : canSave              ? "0 8px 30px rgba(124,58,237,0.4)"
-                  :                        "none",
-                fontFamily: "Nunito, sans-serif",
-              }}
-            >
-              {saveState === "saving" ? "⏳ Kaydediliyor..."
-               : saveState === "done"  ? "✅ Kaydedildi!"
-               : saveState === "error" ? "❌ Kullanıcı adı alınmış"
-               : "💾 Profili Kaydet"}
-            </button>
           </>
         )}
 
