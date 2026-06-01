@@ -6,6 +6,7 @@ import { CATEGORIES } from "../data/categories";
 import { THEMES, applyTheme, getSavedThemeId, COLORBLIND_MODES, applyColorblindMode, getSavedColorblindMode } from "../utils/theme";
 import * as xpModule from "../utils/xp";
 import * as dailyQuestModule from "../utils/dailyQuest";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 const MENU_ITEMS = [
   {
@@ -368,7 +369,7 @@ export default function HomePage() {
           maxWidth: "200px", transition: "all 0.2s",
         }}
       >
-        <div style={{ fontSize: "1.8rem", lineHeight: 1 }}>{playerAvatar}</div>
+        <PlayerAvatar emoji={playerAvatar} size={40} shimmer={false} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90px" }}>

@@ -5,63 +5,9 @@ import { getLocalStats } from "../utils/stats";
 import { CATEGORIES } from "../data/categories";
 import { ACHIEVEMENTS, getUnlockedAchievements, getGameHistory } from "../utils/achievements";
 import { THEMES, applyTheme, getSavedThemeId } from "../utils/theme";
+import PlayerAvatar from "../components/PlayerAvatar";
+import { FREE_AVATARS, PREMIUM_AVATARS, getAvatarMeta, isPremium as checkPremium } from "../data/avatars";
 
-/* ── Sabit veriler ── */
-
-const FREE_AVATARS = [
-  { emoji: "😊", name: "Mutlu"   },
-  { emoji: "🎮", name: "Oyuncu" },
-  { emoji: "🧠", name: "Deha"   },
-  { emoji: "🌟", name: "Yıldız" },
-  { emoji: "🔥", name: "Ateş"   },
-];
-
-const PREMIUM_AVATARS = [
-  { emoji: "👑", name: "Kral",      glow: "#ffd700", anim: "glow-gold"    },
-  { emoji: "🐉", name: "Ejderha",   glow: "#8b5cf6", anim: "glow-purple"  },
-  { emoji: "💎", name: "Elmas",     glow: "#06b6d4", anim: "glow-cyan"    },
-  { emoji: "🦁", name: "Aslan",     glow: "#f59e0b", anim: "glow-amber"   },
-  { emoji: "🔮", name: "Büyücü",    glow: "#a855f7", anim: "glow-purple"  },
-  { emoji: "⚡", name: "Şimşek",    glow: "#eab308", anim: "glow-yellow"  },
-  { emoji: "🌙", name: "Gece",      glow: "#3b82f6", anim: "glow-blue"    },
-  { emoji: "🎭", name: "Tiyatrocu", glow: "#ec4899", anim: "glow-rainbow" },
-  { emoji: "🏆", name: "Şampiyon",  glow: "#fbbf24", anim: "glow-gold"    },
-  { emoji: "🦊", name: "Tilki",     glow: "#f97316", anim: "glow-orange"  },
-  { emoji: "🐺", name: "Kurt",      glow: "#94a3b8", anim: "glow-grey"    },
-  { emoji: "🦋", name: "Kelebek",   glow: "#f472b6", anim: "glow-pink"    },
-  { emoji: "🌊", name: "Deniz",     glow: "#0ea5e9", anim: "glow-blue"    },
-  { emoji: "🎯", name: "Nişancı",   glow: "#ef4444", anim: "glow-red"     },
-  { emoji: "🚀", name: "Astronot",  glow: "#6366f1", anim: "glow-indigo"  },
-  { emoji: "🐲", name: "Mitoloji",  glow: "#10b981", anim: "glow-green"   },
-  { emoji: "🧿", name: "Nazar",     glow: "#0284c7", anim: "glow-blue"    },
-  { emoji: "🦅", name: "Kartal",    glow: "#d97706", anim: "glow-amber"   },
-  { emoji: "💀", name: "Hayalet",   glow: "#e2e8f0", anim: "glow-grey"    },
-  { emoji: "🌈", name: "Gökkuşağı", glow: "#ec4899", anim: "glow-rainbow" },
-];
-
-const KEYFRAMES = `
-@keyframes glow-gold    { 0%,100%{box-shadow:0 0 12px 3px #ffd70066,0 0 24px 6px #f59e0b33} 50%{box-shadow:0 0 22px 8px #ffd700aa,0 0 44px 14px #f59e0b55} }
-@keyframes glow-purple  { 0%,100%{box-shadow:0 0 12px 3px #8b5cf666} 50%{box-shadow:0 0 22px 8px #a855f7aa} }
-@keyframes glow-cyan    { 0%,100%{box-shadow:0 0 12px 3px #06b6d466} 50%{box-shadow:0 0 22px 8px #0ea5e9aa} }
-@keyframes glow-amber   { 0%,100%{box-shadow:0 0 12px 3px #f59e0b66} 50%{box-shadow:0 0 22px 8px #fbbf24aa} }
-@keyframes glow-yellow  { 0%,100%{box-shadow:0 0 12px 3px #eab30866} 50%{box-shadow:0 0 22px 8px #fde04799} }
-@keyframes glow-blue    { 0%,100%{box-shadow:0 0 12px 3px #3b82f666} 50%{box-shadow:0 0 22px 8px #60a5faaa} }
-@keyframes glow-orange  { 0%,100%{box-shadow:0 0 12px 3px #f9731666} 50%{box-shadow:0 0 22px 8px #fb923caa} }
-@keyframes glow-grey    { 0%,100%{box-shadow:0 0 10px 2px #94a3b844} 50%{box-shadow:0 0 18px 6px #cbd5e177} }
-@keyframes glow-pink    { 0%,100%{box-shadow:0 0 12px 3px #f472b666} 50%{box-shadow:0 0 22px 8px #fb7185aa} }
-@keyframes glow-red     { 0%,100%{box-shadow:0 0 12px 3px #ef444466} 50%{box-shadow:0 0 22px 8px #f87171aa} }
-@keyframes glow-indigo  { 0%,100%{box-shadow:0 0 12px 3px #6366f166} 50%{box-shadow:0 0 22px 8px #818cf8aa} }
-@keyframes glow-green   { 0%,100%{box-shadow:0 0 12px 3px #10b98166} 50%{box-shadow:0 0 22px 8px #34d39999} }
-@keyframes glow-rainbow {
-  0%  {box-shadow:0 0 16px 5px #ec489966}
-  25% {box-shadow:0 0 16px 5px #8b5cf666}
-  50% {box-shadow:0 0 16px 5px #06b6d466}
-  75% {box-shadow:0 0 16px 5px #f59e0b66}
-  100%{box-shadow:0 0 16px 5px #ec489966}
-}
-@keyframes float-avatar { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
-@keyframes shimmer-slide { 0%{left:-100%} 50%{left:120%} 100%{left:120%} }
-`;
 
 function getClientId() {
   let id = localStorage.getItem("quizmo_client_id");
@@ -551,9 +497,8 @@ export default function ProfilePage() {
     setTimeout(() => setSaveState("idle"), 2200);
   }
 
-  const allAvatars   = [...FREE_AVATARS, ...PREMIUM_AVATARS];
-  const currentMeta  = allAvatars.find((a) => a.emoji === avatar);
-  const isPremium    = PREMIUM_AVATARS.some((a) => a.emoji === avatar);
+  const currentMeta  = getAvatarMeta(avatar);
+  const isPremium    = checkPremium(avatar);
 
   const nameStatusColor = {
     available: "#10b981", taken: "#ef4444", checking: "#f59e0b",
@@ -583,7 +528,6 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
-      <style>{KEYFRAMES}</style>
       <Particles />
 
       <div style={{ position: "fixed", top: "-20%", right: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
@@ -649,23 +593,7 @@ export default function ProfilePage() {
                 background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.08))",
               }}
             >
-              <div
-                style={{
-                  width: "90px",
-                  height: "90px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.07)",
-                  border: `2px solid ${currentMeta?.glow || "rgba(255,255,255,0.2)"}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "3rem",
-                  animation: "float-avatar 3s ease-in-out infinite",
-                  boxShadow: currentMeta?.glow ? `0 0 24px 6px ${currentMeta.glow}55` : "none",
-                }}
-              >
-                {avatar}
-              </div>
+              <PlayerAvatar emoji={avatar} size={90} float={true} style={{ borderRadius: "50%" }} />
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "white" }}>
                   {name.trim() || "İsimsiz Kahraman"}
@@ -777,24 +705,16 @@ export default function ProfilePage() {
                       onClick={() => setAvatar(av.emoji)}
                       title={av.name}
                       style={{
-                        width: "68px", height: "68px", borderRadius: "16px",
-                        background: selected
-                          ? `linear-gradient(135deg, ${av.glow}33, ${av.glow}18)`
-                          : `linear-gradient(135deg, ${av.glow}18, ${av.glow}08)`,
-                        border: selected ? `2px solid ${av.glow}cc` : `1.5px solid ${av.glow}44`,
-                        cursor: "pointer", fontSize: "1.9rem",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        position: "relative", overflow: "hidden",
-                        animation: `${av.anim} 2.5s ease-in-out infinite`,
+                        padding: 0, background: "none", border: "none", cursor: "pointer",
                         transform: selected ? "translateY(-3px)" : "translateY(0)",
-                        transition: "transform 0.2s ease, border-color 0.2s ease, background 0.2s ease",
+                        transition: "transform 0.2s ease",
+                        position: "relative",
                       }}
                     >
-                      {av.emoji}
+                      <PlayerAvatar emoji={av.emoji} size={68} style={{ borderRadius: "16px", border: selected ? `2px solid ${av.glow}cc` : undefined }} />
                       {selected && (
-                        <div style={{ position: "absolute", bottom: "4px", right: "4px", width: "14px", height: "14px", borderRadius: "50%", background: av.glow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "white", fontWeight: 900 }}>✓</div>
+                        <div style={{ position: "absolute", bottom: "4px", right: "4px", width: "14px", height: "14px", borderRadius: "50%", background: av.glow, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "white", fontWeight: 900, zIndex: 2 }}>✓</div>
                       )}
-                      <div style={{ position: "absolute", top: 0, left: "-100%", width: "60%", height: "100%", background: `linear-gradient(90deg, transparent, ${av.glow}33, transparent)`, animation: "shimmer-slide 3s ease-in-out infinite" }} />
                     </button>
                   );
                 })}

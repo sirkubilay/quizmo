@@ -4,6 +4,7 @@ import { CATEGORIES } from "../data/categories";
 import { getQuestions } from "../data/questions/index.js";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import PlayerAvatar from "../components/PlayerAvatar";
 
 export default function Lobby() {
   const navigate = useNavigate();
@@ -245,18 +246,23 @@ export default function Lobby() {
                 }}
               >
                 {/* Avatar */}
-                <div style={{
-                  width: "42px", height: "42px", borderRadius: "50%", flexShrink: 0,
-                  background: player.avatar
-                    ? "rgba(255,255,255,0.08)"
-                    : `linear-gradient(135deg, hsl(${(player.name.charCodeAt(0) * 37) % 360}, 70%, 50%), hsl(${(player.name.charCodeAt(0) * 37 + 60) % 360}, 70%, 40%))`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: player.avatar ? "1.5rem" : "1.1rem",
-                  fontWeight: 800,
-                  border: player.id === socket.id ? "2px solid rgba(124,58,237,0.5)" : "2px solid rgba(255,255,255,0.08)",
-                }}>
-                  {player.avatar || player.name[0].toUpperCase()}
-                </div>
+                {player.avatar ? (
+                  <PlayerAvatar
+                    emoji={player.avatar}
+                    size={42}
+                    style={{ border: player.id === socket.id ? "2px solid rgba(124,58,237,0.6)" : undefined }}
+                  />
+                ) : (
+                  <div style={{
+                    width: "42px", height: "42px", borderRadius: "50%", flexShrink: 0,
+                    background: `linear-gradient(135deg, hsl(${(player.name.charCodeAt(0) * 37) % 360}, 70%, 50%), hsl(${(player.name.charCodeAt(0) * 37 + 60) % 360}, 70%, 40%))`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "1.1rem", fontWeight: 800,
+                    border: player.id === socket.id ? "2px solid rgba(124,58,237,0.5)" : "2px solid rgba(255,255,255,0.08)",
+                  }}>
+                    {player.name[0].toUpperCase()}
+                  </div>
+                )}
 
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "6px" }}>
