@@ -15,12 +15,14 @@ const io = new Server(server, {
   cors: { origin: CLIENT_URL, methods: ["GET", "POST"] },
 });
 
-const rooms           = {};
-const questionTimers  = {}; // roomCode → setTimeout handle
-const matchQueue      = []; // { socketId, playerName, category }
-const matchBotTimers  = {}; // socketId → setTimeout (15 sn bot tetikleyici)
-const botAnswerTimers = {}; // roomCode → setTimeout (bot cevabı)
-const rematchVotes    = {}; // roomCode → Set<socketId>
+const rooms             = {};
+const questionTimers    = {}; // roomCode → setTimeout handle
+const nextQTimers       = {}; // roomCode → setTimeout (sonraki soru geçiş)
+const matchQueue        = []; // { socketId, playerName, category }
+const matchBotTimers    = {}; // socketId → setTimeout (15 sn bot tetikleyici)
+const botAnswerTimers   = {}; // roomCode → setTimeout (bot cevabı)
+const rematchVotes      = {}; // roomCode → Set<socketId>
+const disconnectTimers  = {}; // "roomCode:socketId" → setTimeout (8s tolerans)
 
 const BOT_NAMES = ["Burak", "Ayşe", "Emre", "Fatma", "Can", "Zeynep", "Mert", "Selin", "Berk", "Elif", "Ozan", "Derya"];
 const BOT_ACCURACY_MIN = 0.50; // %50
@@ -127,7 +129,7 @@ function endQuestion(roomCode, idx) {
 
   if (!isLast) {
     // Sonraki soruya 4 s sonra geç
-    setTimeout(() => startQuestion(roomCode, nextIdx), 4_000);
+    nextQTimers[roomCode] = setTimeout(() => startQuestion(roomCode, nextIdx), 4_000);
   } else {
     // Oyun bitti
     setTimeout(() => {
@@ -439,8 +441,16 @@ io.on("connection", (socket) => {
     const player = room.players.find(p => p.name === playerName);
     if (!player) return;
 
+    // Grace timer varsa iptal et (bağlantı geri geldi)
+    const timerKey = `${code}:${player.id}`;
+    if (disconnectTimers[timerKey]) {
+      clearTimeout(disconnectTimers[timerKey]);
+      delete disconnectTimers[timerKey];
+    }
+
     const oldId = player.id;
     player.id = socket.id;
+    player.disconnected = false;
     socket.join(code);
     socket.roomCode = code;
 
@@ -482,11 +492,85 @@ io.on("connection", (socket) => {
     const code = socket.roomCode;
     if (!code || !rooms[code]) return;
 
-    const room  = rooms[code];
-    const pIdx  = room.players.findIndex(p => p.id === socket.id);
+    const room = rooms[code];
+    const pIdx = room.players.findIndex(p => p.id === socket.id);
     if (pIdx === -1) return;
 
-    const { isHost, name } = room.players[pIdx];
+    const player = room.players[pIdx];
+
+    // Oyun sırasında geçici kopma olabilir (mobil arka plan, sinyal vb.)
+    // Doğrudan silmek yerine 8 saniyelik tolerans ver
+    if (room.status === "playing") {
+      player.disconnected = true;
+      console.log(`⚠️ ${player.name} geçici koptu (8s tolerans): ${code}`);
+
+      const timerKey = `${code}:${socket.id}`;
+      disconnectTimers[timerKey] = setTimeout(() => {
+        delete disconnectTimers[timerKey];
+        if (!rooms[code]) return;
+        // Hâlâ kopuk mu kontrol et (geri bağlanmadıysa)
+        const stillIdx = rooms[code].players.findIndex(p => p.id === socket.id || (p.name === player.name && p.disconnected));
+        if (stillIdx === -1) return;
+
+        const { isHost, name } = rooms[code].players[stillIdx];
+        rooms[code].players.splice(stillIdx, 1);
+        console.log(`❌ ${name} zaman aşımı ile ayrıldı: ${code}`);
+
+        if (rooms[code].players.length === 0) {
+          clearTimeout(questionTimers[code]);
+          clearTimeout(nextQTimers[code]);
+          delete questionTimers[code];
+          delete nextQTimers[code];
+          delete rooms[code];
+          return;
+        }
+
+        if (rooms[code].status === "playing" && rooms[code].players.filter(p => !p.isBot).length === 0) {
+          delete rooms[code];
+          return;
+        }
+
+        if (rooms[code].status === "playing" && rooms[code].players.length === 1) {
+          clearTimeout(questionTimers[code]);
+          clearTimeout(nextQTimers[code]);
+          delete questionTimers[code];
+          delete nextQTimers[code];
+          if (rooms[code].players[0].isBot) {
+            delete rooms[code];
+          } else {
+            rooms[code].status = "finished";
+            io.to(code).emit("player_left", { playerName: name });
+            io.to(code).emit("game_over", { players: [...rooms[code].players] });
+          }
+          return;
+        }
+
+        if (isHost && rooms[code].players.length > 0) {
+          rooms[code].players[0].isHost = true;
+          io.to(code).emit("host_changed", { newHost: rooms[code].players[0].name });
+        }
+
+        io.to(code).emit("players_updated", { players: rooms[code].players });
+        io.to(code).emit("player_left",     { playerName: name });
+
+        // Kalan oyuncuların hepsi cevapladıysa soruyu bitir
+        if (rooms[code].status === "playing") {
+          const active   = rooms[code].players.map(p => p.id);
+          const answered = active.filter(id => rooms[code].answers[id]).length;
+          if (answered >= active.length) {
+            clearTimeout(questionTimers[code]);
+            endQuestion(code, rooms[code].currentQuestion);
+          }
+        }
+      }, 8_000);
+
+      // Diğer oyunculara bildir ama oyunu bitirme
+      io.to(code).emit("player_left", { playerName: player.name });
+      return;
+    }
+
+    // Oyun dışında (lobi/bekleme) → normal silme
+    const { isHost, name } = player;
     room.players.splice(pIdx, 1);
     console.log(`❌ ${name} ayrıldı: ${code}`);
 
@@ -494,28 +578,6 @@ io.on("connection", (socket) => {
       delete rooms[code];
       clearTimeout(questionTimers[code]);
       delete questionTimers[code];
-      console.log(`🗑️ Oda silindi: ${code}`);
-      return;
-    }
-
-    // Oyun sürerken tek oyuncu/bot kaldıysa
-    if (room.status === "playing" && room.players.length === 1) {
-      clearTimeout(questionTimers[code]);
-      delete questionTimers[code];
-      clearTimeout(botAnswerTimers[code]);
-      delete botAnswerTimers[code];
-
-      if (room.players[0].isBot) {
-        // Sadece bot kaldı — odayı sil, kimseye bildirme
-        delete rooms[code];
-        console.log(`🤖 Bot odası silindi (insan ayrıldı): ${code}`);
-      } else {
-        // Tek insan kaldı — kazandı
-        room.status = "finished";
-        io.to(code).emit("player_left", { playerName: name });
-        io.to(code).emit("game_over", { players: [...room.players] });
-        console.log(`🏆 Rakip ayrıldı, kazanan: ${room.players[0].name} | ${code}`);
-      }
       return;
     }
 
@@ -526,16 +588,6 @@ io.on("connection", (socket) => {
 
     io.to(code).emit("players_updated", { players: room.players });
     io.to(code).emit("player_left",     { playerName: name });
-
-    // Oyun sürerken: kalan tüm oyuncular cevapladıysa soruyu bitir
-    if (room.status === "playing" && room.answers && room.players.length > 0) {
-      const remaining = room.players.map(p => p.id);
-      const answeredRemaining = remaining.filter(id => room.answers[id]).length;
-      if (answeredRemaining >= room.players.length) {
-        clearTimeout(questionTimers[code]);
-        endQuestion(code, room.currentQuestion);
-      }
-    }
   });
 });
 
