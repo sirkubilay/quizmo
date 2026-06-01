@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Particles from "../components/Particles";
 import { getLocalStats, getWeeklyTop3 } from "../utils/stats";
 import { CATEGORIES } from "../data/categories";
+import { THEMES, applyTheme, getSavedThemeId, COLORBLIND_MODES, applyColorblindMode, getSavedColorblindMode } from "../utils/theme";
 
 const MENU_ITEMS = [
   {
@@ -111,11 +112,182 @@ function AltayLogo() {
   );
 }
 
+/* ── Ayarlar Paneli ── */
+function SettingsPanel({ onClose }) {
+  const [activeTheme,     setActiveTheme]     = useState(getSavedThemeId());
+  const [activeColorblind, setActiveColorblind] = useState(getSavedColorblindMode());
+  const [settingsTab,     setSettingsTab]     = useState("tema");
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
+    }
+    setTimeout(() => document.addEventListener("mousedown", handleClick), 50);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  const handleTheme = (id) => {
+    setActiveTheme(id);
+    applyTheme(id);
+  };
+
+  const handleColorblind = (id) => {
+    setActiveColorblind(id);
+    applyColorblindMode(id);
+  };
+
+  return (
+    <div
+      ref={panelRef}
+      style={{
+        position: "fixed",
+        top: "68px",
+        right: "16px",
+        width: "min(360px, calc(100vw - 32px))",
+        background: "rgba(15,12,41,0.97)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        borderRadius: "22px",
+        backdropFilter: "blur(30px)",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.2)",
+        zIndex: 9000,
+        overflow: "hidden",
+        animation: "settings-drop 0.28s cubic-bezier(0.34,1.56,0.64,1)",
+      }}
+    >
+      <style>{`
+        @keyframes settings-drop {
+          from { opacity: 0; transform: translateY(-14px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0)     scale(1);    }
+        }
+      `}</style>
+
+      {/* Panel header */}
+      <div style={{ padding: "18px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontWeight: 800, fontSize: "1rem" }}>⚙️ Ayarlar</div>
+        <button
+          onClick={onClose}
+          style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "28px", height: "28px", cursor: "pointer", fontSize: "0.9rem" }}
+        >✕</button>
+      </div>
+
+      {/* İç tab bar */}
+      <div style={{ display: "flex", gap: "6px", padding: "14px 16px 0" }}>
+        {[{ id: "tema", label: "🎨 Tema" }, { id: "erisim", label: "👁️ Erişim" }].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSettingsTab(t.id)}
+            style={{
+              flex: 1, padding: "8px", borderRadius: "10px", cursor: "pointer",
+              border: settingsTab === t.id ? "none" : "1px solid rgba(255,255,255,0.1)",
+              background: settingsTab === t.id ? "linear-gradient(135deg,#7c3aed,#6366f1)" : "rgba(255,255,255,0.05)",
+              color: settingsTab === t.id ? "white" : "rgba(255,255,255,0.5)",
+              fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem",
+              transition: "all 0.2s",
+            }}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      <div style={{ padding: "14px 16px 18px", maxHeight: "70vh", overflowY: "auto" }}>
+
+        {/* TEMA SEKMESİ */}
+        {settingsTab === "tema" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {THEMES.map((theme) => {
+              const sel = activeTheme === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  onClick={() => handleTheme(theme.id)}
+                  style={{
+                    width: "100%", padding: 0, borderRadius: "14px", overflow: "hidden",
+                    border: `2px solid ${sel ? theme.accent : "rgba(255,255,255,0.08)"}`,
+                    cursor: "pointer", transition: "all 0.25s",
+                    boxShadow: sel ? `0 0 18px ${theme.accent}44` : "none",
+                    transform: sel ? "scale(1.015)" : "scale(1)",
+                  }}
+                >
+                  <div style={{ height: "52px", background: theme.gradient, display: "flex", alignItems: "center", padding: "0 14px", gap: "10px", position: "relative" }}>
+                    <span style={{ fontSize: "1.4rem" }}>{theme.emoji}</span>
+                    <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "white" }}>{theme.name}</span>
+                    <div style={{ marginLeft: "auto", display: "flex", gap: "5px" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: theme.accent }} />
+                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: theme.accent2 }} />
+                    </div>
+                    {sel && (
+                      <div style={{ position: "absolute", right: "40px", top: "50%", transform: "translateY(-50%)", width: "20px", height: "20px", borderRadius: "50%", background: theme.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900 }}>✓</div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ERİŞİLEBİLİRLİK SEKMESİ */}
+        {settingsTab === "erisim" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              Renk Körlüğü Modu
+            </div>
+            {COLORBLIND_MODES.map((mode) => {
+              const sel = activeColorblind === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  onClick={() => handleColorblind(mode.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "12px",
+                    padding: "12px 14px", borderRadius: "12px", cursor: "pointer",
+                    border: `1.5px solid ${sel ? "#7c3aed" : "rgba(255,255,255,0.08)"}`,
+                    background: sel ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.04)",
+                    transition: "all 0.2s", width: "100%",
+                    fontFamily: "Nunito, sans-serif",
+                  }}
+                >
+                  <span style={{ fontSize: "1.4rem" }}>{mode.emoji}</span>
+                  <div style={{ flex: 1, textAlign: "left" }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "white" }}>{mode.name}</div>
+                    {mode.id === "none" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Standart renkler</div>}
+                    {mode.id === "protanopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Kırmızı-yeşil (kırmızı zayıf)</div>}
+                    {mode.id === "deuteranopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Kırmızı-yeşil (yeşil zayıf)</div>}
+                    {mode.id === "tritanopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Mavi-sarı renk körlüğü</div>}
+                    {mode.id === "grayscale" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Tüm renkler griye dönüşür</div>}
+                  </div>
+                  {sel && <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>}
+                </button>
+              );
+            })}
+
+            <div style={{ marginTop: "8px", padding: "12px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>
+                💡 Renk körlüğü modu tüm oyun ekranlarını etkiler. Doğru/yanlış renkleri, grafikler ve arayüz unsurları seçilen moda göre görünür.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Gear Icon SVG ── */
+function GearIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
-  const [hovered,   setHovered]   = useState(null);
-  const [top3,      setTop3]      = useState([]);
-  const [localStats, setLocalStats] = useState({});
+  const [hovered,      setHovered]      = useState(null);
+  const [top3,         setTop3]         = useState([]);
+  const [localStats,   setLocalStats]   = useState({});
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     setLocalStats(getLocalStats());
@@ -125,10 +297,38 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <Particles />
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       {/* Arka plan ışıkları */}
       <div style={{ position: "fixed", top: "-20%", left: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "fixed", bottom: "-20%", right: "-10%", width: "600px", height: "600px", borderRadius: "50%", background: "radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
+
+      {/* Sağ üst ⚙️ butonu */}
+      <button
+        onClick={() => setShowSettings((v) => !v)}
+        style={{
+          position: "fixed",
+          top: "16px",
+          right: "16px",
+          zIndex: 8999,
+          width: "44px",
+          height: "44px",
+          borderRadius: "14px",
+          border: showSettings ? "1.5px solid rgba(124,58,237,0.7)" : "1.5px solid rgba(255,255,255,0.15)",
+          background: showSettings ? "rgba(124,58,237,0.22)" : "rgba(255,255,255,0.08)",
+          color: "white",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(16px)",
+          transition: "all 0.2s",
+          boxShadow: showSettings ? "0 0 20px rgba(124,58,237,0.4)" : "0 4px 16px rgba(0,0,0,0.3)",
+        }}
+        title="Ayarlar"
+      >
+        <GearIcon />
+      </button>
 
       {/* İçerik */}
       <div

@@ -12,17 +12,50 @@ import OnlinePage from "./pages/OnlinePage";
 import MultiplayerGame from "./pages/MultiplayerGame";
 import SplashScreen from "./components/SplashScreen";
 import AchievementToast from "./components/AchievementToast";
-import { applyTheme, getSavedThemeId } from "./utils/theme";
+import { applyTheme, getSavedThemeId, applyColorblindMode, getSavedColorblindMode } from "./utils/theme";
+
+/* SVG color-matrix filters for colorblind simulation */
+function ColorblindFilters() {
+  return (
+    <svg style={{ display: "none" }} aria-hidden="true">
+      <defs>
+        <filter id="cb-protanopia">
+          <feColorMatrix type="matrix" values="
+            0.567 0.433 0.000 0 0
+            0.558 0.442 0.000 0 0
+            0.000 0.242 0.758 0 0
+            0     0     0     1 0" />
+        </filter>
+        <filter id="cb-deuteranopia">
+          <feColorMatrix type="matrix" values="
+            0.625 0.375 0.000 0 0
+            0.700 0.300 0.000 0 0
+            0.000 0.300 0.700 0 0
+            0     0     0     1 0" />
+        </filter>
+        <filter id="cb-tritanopia">
+          <feColorMatrix type="matrix" values="
+            0.950 0.050 0.000 0 0
+            0.000 0.433 0.567 0 0
+            0.000 0.475 0.525 0 0
+            0     0     0     1 0" />
+        </filter>
+      </defs>
+    </svg>
+  );
+}
 
 export default function App() {
   const [splash, setSplash] = useState(true);
 
   useEffect(() => {
     applyTheme(getSavedThemeId());
+    applyColorblindMode(getSavedColorblindMode());
   }, []);
 
   return (
     <>
+      <ColorblindFilters />
       {splash && <SplashScreen onDone={() => setSplash(false)} />}
       <AchievementToast />
 

@@ -31,6 +31,38 @@ export const THEMES = [
     accent: "#ec4899",
     accent2: "#f472b6",
   },
+  {
+    id: "sunset",
+    name: "Gün Batımı",
+    emoji: "🌅",
+    gradient: "linear-gradient(135deg, #1a0a00 0%, #3d1a00 50%, #2a1020 100%)",
+    accent: "#f97316",
+    accent2: "#ef4444",
+  },
+  {
+    id: "ice",
+    name: "Buz",
+    emoji: "❄️",
+    gradient: "linear-gradient(135deg, #050d1a 0%, #0a1a2e 50%, #0d2040 100%)",
+    accent: "#bae6fd",
+    accent2: "#e0f2fe",
+  },
+  {
+    id: "gold",
+    name: "Altın",
+    emoji: "✨",
+    gradient: "linear-gradient(135deg, #1a1200 0%, #2d2000 50%, #1a1500 100%)",
+    accent: "#fbbf24",
+    accent2: "#fcd34d",
+  },
+  {
+    id: "sakura",
+    name: "Sakura",
+    emoji: "🌸",
+    gradient: "linear-gradient(135deg, #1a0a14 0%, #2d1428 50%, #1a0a1a 100%)",
+    accent: "#f472b6",
+    accent2: "#e879f9",
+  },
 ];
 
 export function applyTheme(themeId) {
@@ -44,4 +76,23 @@ export function applyTheme(themeId) {
 
 export function getSavedThemeId() {
   return localStorage.getItem("quizmo_theme") || "purple";
+}
+
+/* ── Renk körlüğü ── */
+export const COLORBLIND_MODES = [
+  { id: "none",         name: "Normal",              emoji: "👁️", filter: "none" },
+  { id: "protanopia",   name: "Protanopi",            emoji: "🔴", filter: "url(#cb-protanopia)"   },
+  { id: "deuteranopia", name: "Deuteranopi",          emoji: "🟢", filter: "url(#cb-deuteranopia)" },
+  { id: "tritanopia",   name: "Tritanopi",            emoji: "🔵", filter: "url(#cb-tritanopia)"   },
+  { id: "grayscale",    name: "Tam Renk Körlüğü",     emoji: "⬜", filter: "grayscale(100%)"        },
+];
+
+export function applyColorblindMode(modeId) {
+  const mode = COLORBLIND_MODES.find((m) => m.id === modeId) || COLORBLIND_MODES[0];
+  document.body.style.filter = mode.id === "none" ? "" : mode.filter;
+  localStorage.setItem("quizmo_colorblind", mode.id);
+}
+
+export function getSavedColorblindMode() {
+  return localStorage.getItem("quizmo_colorblind") || "none";
 }

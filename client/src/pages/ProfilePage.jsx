@@ -77,42 +77,89 @@ const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 /* ══════════════════════════════
    İSTATİSTİK GRAFIK SEKMESİ
 ══════════════════════════════ */
-function StatsTab() {
-  const stats   = getLocalStats();
-  const history = getGameHistory();
+const PERIODS = [
+  { id: "daily",   label: "Günlük",    ms: 86400000 },
+  { id: "weekly",  label: "Haftalık",  ms: 7 * 86400000 },
+  { id: "monthly", label: "Aylık",     ms: 30 * 86400000 },
+  { id: "all",     label: "Tümü",      ms: Infinity },
+];
 
-  const totalCorrect = Object.values(stats).reduce((s, c) => s + (c.correct || 0), 0);
-  const totalWrong   = Object.values(stats).reduce((s, c) => s + (c.wrong   || 0), 0);
+function StatsTab() {
+  const [period, setPeriod] = useState("all");
+  const allHistory = getGameHistory();
+
+  const now     = Date.now();
+  const periodMs = PERIODS.find((p) => p.id === period)?.ms ?? Infinity;
+  const history  = periodMs === Infinity
+    ? allHistory
+    : allHistory.filter((g) => now - g.date <= periodMs);
+
+  // Kategori istatistiklerini history'den türet (periyoda göre doğru)
+  const catMap = {};
+  history.forEach((g) => {
+    if (!g.categoryId) return;
+    if (!catMap[g.categoryId]) catMap[g.categoryId] = { correct: 0, wrong: 0 };
+    catMap[g.categoryId].correct += g.correct || 0;
+    catMap[g.categoryId].wrong   += g.wrong   || 0;
+  });
+
+  const totalCorrect = Object.values(catMap).reduce((s, c) => s + c.correct, 0);
+  const totalWrong   = Object.values(catMap).reduce((s, c) => s + c.wrong,   0);
   const totalGames   = history.length;
   const accuracy     = totalCorrect + totalWrong > 0
     ? Math.round((totalCorrect / (totalCorrect + totalWrong)) * 100)
     : 0;
 
-  // Kategori bazlı veriler, en çok doğrudan sırala, top 8
   const catData = CATEGORIES
     .map((cat) => ({
       ...cat,
-      correct: stats[cat.id]?.correct || 0,
-      wrong:   stats[cat.id]?.wrong   || 0,
+      correct: catMap[cat.id]?.correct || 0,
+      wrong:   catMap[cat.id]?.wrong   || 0,
     }))
     .filter((c) => c.correct + c.wrong > 0)
     .sort((a, b) => b.correct - a.correct)
     .slice(0, 8);
 
   const maxVal = catData.reduce((m, c) => Math.max(m, c.correct + c.wrong), 1);
-
-  // Son 10 oyun
   const recent = [...history].reverse().slice(0, 10);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
 
+      {/* Periyot seçici */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        {PERIODS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setPeriod(p.id)}
+            style={{
+              flex: 1,
+              padding: "9px 4px",
+              borderRadius: "12px",
+              border: period === p.id ? "none" : "1px solid rgba(255,255,255,0.1)",
+              background: period === p.id
+                ? "linear-gradient(135deg, #7c3aed, #6366f1)"
+                : "rgba(255,255,255,0.05)",
+              color: period === p.id ? "white" : "rgba(255,255,255,0.45)",
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              fontSize: "0.78rem",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              boxShadow: period === p.id ? "0 4px 14px rgba(124,58,237,0.4)" : "none",
+            }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Özet kartlar */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
         {[
-          { label: "Oyun",    value: totalGames,   color: "#6366f1", icon: "🎮" },
-          { label: "Doğru",   value: totalCorrect, color: "#10b981", icon: "✅" },
-          { label: "Yanlış",  value: totalWrong,   color: "#ef4444", icon: "❌" },
+          { label: "Oyun",    value: totalGames,     color: "#6366f1", icon: "🎮" },
+          { label: "Doğru",   value: totalCorrect,   color: "#10b981", icon: "✅" },
+          { label: "Yanlış",  value: totalWrong,     color: "#ef4444", icon: "❌" },
           { label: "Başarı",  value: `%${accuracy}`, color: "#f59e0b", icon: "🎯" },
         ].map((s) => (
           <div key={s.label} className="glass-card" style={{ padding: "18px 16px", textAlign: "center" }}>
@@ -131,24 +178,20 @@ function StatsTab() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {catData.map((cat) => {
-              const total   = cat.correct + cat.wrong;
-              const accPct  = Math.round((cat.correct / total) * 100);
-              const barW    = Math.round((total / maxVal) * 100);
+              const total    = cat.correct + cat.wrong;
+              const accPct   = Math.round((cat.correct / total) * 100);
+              const barW     = Math.round((total / maxVal) * 100);
               const correctW = total > 0 ? Math.round((cat.correct / total) * barW) : 0;
               return (
                 <div key={cat.id}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>
-                      {cat.icon} {cat.name}
-                    </span>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>{cat.icon} {cat.name}</span>
                     <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.45)" }}>
                       {cat.correct}/{total} · %{accPct}
                     </span>
                   </div>
                   <div style={{ height: "10px", background: "rgba(255,255,255,0.07)", borderRadius: "6px", overflow: "hidden", position: "relative" }}>
-                    {/* toplam bar (yanlış kısmı) */}
                     <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: `${barW}%`, background: "rgba(239,68,68,0.35)", borderRadius: "6px" }} />
-                    {/* doğru kısım */}
                     <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: `${correctW}%`, background: cat.color || "#7c3aed", borderRadius: "6px", boxShadow: `0 0 6px ${cat.color || "#7c3aed"}88`, transition: "width 0.8s ease" }} />
                   </div>
                 </div>
@@ -160,7 +203,8 @@ function StatsTab() {
         <div className="glass-card" style={{ padding: "40px", textAlign: "center" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🎮</div>
           <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.9rem" }}>
-            Henüz oyun oynamadın.<br />İstatistikler burada görünecek!
+            {period === "all" ? "Henüz oyun oynamadın." : "Bu dönemde oyun bulunamadı."}<br />
+            İstatistikler burada görünecek!
           </div>
         </div>
       )}
@@ -173,11 +217,11 @@ function StatsTab() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {recent.map((g, i) => {
-              const cat     = CATEGORIES.find((c) => c.id === g.categoryId);
-              const total   = g.correct + g.wrong;
-              const pct     = total > 0 ? Math.round((g.correct / total) * 100) : 0;
-              const color   = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
-              const date    = new Date(g.date).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+              const cat   = CATEGORIES.find((c) => c.id === g.categoryId);
+              const total = g.correct + g.wrong;
+              const pct   = total > 0 ? Math.round((g.correct / total) * 100) : 0;
+              const color = pct >= 80 ? "#10b981" : pct >= 50 ? "#f59e0b" : "#ef4444";
+              const date  = new Date(g.date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
               return (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
                   <span style={{ fontSize: "1.3rem" }}>{cat?.icon || "🎮"}</span>
