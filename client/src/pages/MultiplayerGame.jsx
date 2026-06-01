@@ -418,10 +418,11 @@ export default function MultiplayerGame() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [notification,  setNotification]  = useState("");
 
-  const timerRef   = useRef(null);
-  const correctRef = useRef(0);
-  const wrongRef   = useRef(0);
-  const myId       = socket.id;
+  const timerRef      = useRef(null);
+  const watchdogRef   = useRef(null); // "results" fazında Q2 gelmezse devreye girer
+  const correctRef    = useRef(0);
+  const wrongRef      = useRef(0);
+  const myId          = socket.id;
 
   const showNotif = (msg) => {
     setNotification(msg);
@@ -479,6 +480,7 @@ export default function MultiplayerGame() {
     if (!socket.connected) socket.connect();
 
     const onQuestionStart = ({ question: q, index, total, timeLimit }) => {
+      clearTimeout(watchdogRef.current); // soru geldi, watchdog'u iptal et
       clearInterval(timerRef.current);
       setQuestion(q);
       setShuffledOpts(fisherYates(q.options));
@@ -506,6 +508,16 @@ export default function MultiplayerGame() {
       setPlayers(updatedPlayers);
       setIsLast(last);
       setPhase("results");
+
+      // Son soru değilse: sonraki question_start gelmezse 7s sonra zorla yeniden bağlan
+      if (!last) {
+        clearTimeout(watchdogRef.current);
+        watchdogRef.current = setTimeout(() => {
+          const pName = (localStorage.getItem("quizmo_profile_name") || "").trim()
+            || `Misafir${localStorage.getItem("quizmo_guest_id") || ""}`;
+          socket.emit("rejoin_room", { roomCode, playerName: pName });
+        }, 7000);
+      }
     };
 
     const onGameOver = ({ players: finalP }) => {

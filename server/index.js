@@ -462,6 +462,23 @@ io.on("connection", (socket) => {
     socket.emit("rejoined", { room, status: room.status, currentQuestion: room.currentQuestion });
     io.to(code).emit("players_updated", { players: room.players });
     console.log(`🔄 ${playerName} yeniden bağlandı: ${code}`);
+
+    // Oyun devam ediyorsa mevcut soruyu tekrar gönder (client event kaçırmış olabilir)
+    if (room.status === "playing" && room.currentQuestion >= 0) {
+      const q = room.questions[room.currentQuestion];
+      if (q) {
+        const { answer, ...sanitized } = q;
+        const tpq      = room.timePerQuestion || 20;
+        const elapsed  = room.questionStartTime ? (Date.now() - room.questionStartTime) / 1000 : 0;
+        const timeLeft = Math.max(tpq - elapsed, 1);
+        socket.emit("question_start", {
+          question:  sanitized,
+          index:     room.currentQuestion,
+          total:     room.questions.length,
+          timeLimit: Math.round(timeLeft),
+        });
+      }
+    }
   });
 
   /* ── Eşleşme aramasını iptal et ── */
