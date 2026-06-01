@@ -178,11 +178,10 @@ function DeleteAccountModal({ onClose }) {
 }
 
 /* ── Ayarlar Paneli ── */
-function SettingsPanel({ onClose }) {
+function SettingsPanel({ onClose, onDeleteRequest }) {
   const [activeTheme,      setActiveTheme]      = useState(getSavedThemeId());
   const [activeColorblind, setActiveColorblind] = useState(getSavedColorblindMode());
   const [openSection,      setOpenSection]      = useState(null);
-  const [showDelete,       setShowDelete]       = useState(false);
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -205,7 +204,6 @@ function SettingsPanel({ onClose }) {
 
   return (
     <>
-      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} />}
       <div
         ref={panelRef}
         style={{
@@ -295,7 +293,7 @@ function SettingsPanel({ onClose }) {
           {/* ── Hesabımı Sil ── */}
           <div style={{ padding: "14px 20px 18px" }}>
             <button
-              onClick={() => { onClose(); setTimeout(() => setShowDelete(true), 100); }}
+              onClick={() => { onClose(); onDeleteRequest(); }}
               style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "1.5px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}
             >
               🗑️ Hesabımı Sil
@@ -350,7 +348,8 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
       <Particles />
-      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+      {showDelete   && <DeleteAccountModal onClose={() => setShowDelete(false)} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} onDeleteRequest={() => setShowDelete(true)} />}
 
       {/* Arka plan ışıkları */}
       <div style={{ position: "fixed", top: "-20%", left: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
