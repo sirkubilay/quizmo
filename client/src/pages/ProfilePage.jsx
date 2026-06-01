@@ -464,6 +464,7 @@ export default function ProfilePage() {
             signal: AbortSignal.timeout(4000),
           }).catch(() => {});
           localStorage.setItem("quizmo_profile_name", trimmed);
+          window.dispatchEvent(new Event("quizmo-profile-updated"));
           setNameStatus("saved");
           setTimeout(() => setNameStatus("idle"), 2000);
         } else {
@@ -639,7 +640,7 @@ export default function ProfilePage() {
                   return (
                     <button
                       key={av.emoji}
-                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); }}
+                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); window.dispatchEvent(new Event("quizmo-profile-updated")); }}
                       title={av.name}
                       style={{
                         width: "68px", height: "68px", borderRadius: "16px",
@@ -683,7 +684,7 @@ export default function ProfilePage() {
                   return (
                     <button
                       key={av.emoji}
-                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); }}
+                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); window.dispatchEvent(new Event("quizmo-profile-updated")); }}
                       title={av.name}
                       style={{
                         padding: 0, background: "none", border: "none", cursor: "pointer",

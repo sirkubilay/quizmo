@@ -327,23 +327,37 @@ export default function HomePage() {
   const [dailyQuest,   setDailyQuest]   = useState(null);
   const [questDef,     setQuestDef]     = useState(null);
 
-  const playerName = localStorage.getItem("quizmo_profile_name") || "";
-  const playerAvatar = localStorage.getItem("quizmo_profile_avatar") || "🧠";
+  const [playerName,   setPlayerName]   = useState(() => localStorage.getItem("quizmo_profile_name")   || "");
+  const [playerAvatar, setPlayerAvatar] = useState(() => localStorage.getItem("quizmo_profile_avatar") || "🧠");
+
+  const refreshProfile = () => {
+    setPlayerName(localStorage.getItem("quizmo_profile_name")   || "");
+    setPlayerAvatar(localStorage.getItem("quizmo_profile_avatar") || "🧠");
+    const { getTotalXP, getLevel, getLevelProgress, getLevelTitle } = xpModule;
+    const total = getTotalXP();
+    const level = getLevel(total);
+    const prog  = getLevelProgress(total);
+    setXpData({ total, level, current: prog.current, max: prog.max, title: getLevelTitle(level) });
+  };
 
   useEffect(() => {
     setLocalStats(getLocalStats());
     getWeeklyTop3().then(setTop3).catch(() => {});
-
-    const { getTotalXP, getLevel, getLevelProgress, getLevelTitle } = xpModule;
-    const total   = getTotalXP();
-    const level   = getLevel(total);
-    const prog    = getLevelProgress(total);
-    setXpData({ total, level, current: prog.current, max: prog.max, title: getLevelTitle(level) });
+    refreshProfile();
 
     const quest = dailyQuestModule.getDailyQuest();
     const def   = quest ? dailyQuestModule.getQuestDef(quest.questId) : null;
     setDailyQuest(quest);
     setQuestDef(def);
+
+    // Aynı sekme içi profil değişikliklerini yakala
+    window.addEventListener("quizmo-profile-updated", refreshProfile);
+    // Sekme focus'u (kullanıcı geri döndüğünde)
+    window.addEventListener("focus", refreshProfile);
+    return () => {
+      window.removeEventListener("quizmo-profile-updated", refreshProfile);
+      window.removeEventListener("focus", refreshProfile);
+    };
   }, []);
 
   return (
