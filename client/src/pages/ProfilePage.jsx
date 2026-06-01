@@ -491,8 +491,7 @@ export default function ProfilePage() {
       }
     } catch {}
 
-    localStorage.setItem("quizmo_profile_name",   trimmed);
-    localStorage.setItem("quizmo_profile_avatar", avatar);
+    localStorage.setItem("quizmo_profile_name", trimmed);
     setSaveState("done");
     setTimeout(() => setSaveState("idle"), 2200);
   }
@@ -658,7 +657,7 @@ export default function ProfilePage() {
                   return (
                     <button
                       key={av.emoji}
-                      onClick={() => setAvatar(av.emoji)}
+                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); }}
                       title={av.name}
                       style={{
                         width: "68px", height: "68px", borderRadius: "16px",
@@ -702,7 +701,7 @@ export default function ProfilePage() {
                   return (
                     <button
                       key={av.emoji}
-                      onClick={() => setAvatar(av.emoji)}
+                      onClick={() => { setAvatar(av.emoji); localStorage.setItem("quizmo_profile_avatar", av.emoji); }}
                       title={av.name}
                       style={{
                         padding: 0, background: "none", border: "none", cursor: "pointer",
