@@ -11,6 +11,7 @@ import ProfilePage from "./pages/ProfilePage";
 import OnlinePage from "./pages/OnlinePage";
 import MultiplayerGame from "./pages/MultiplayerGame";
 import SplashScreen from "./components/SplashScreen";
+import PrivacyPage from "./pages/PrivacyPage";
 import AchievementToast from "./components/AchievementToast";
 import { applyTheme, getSavedThemeId, applyColorblindMode, getSavedColorblindMode } from "./utils/theme";
 
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/profile"           element={<ProfilePage />}     />
           <Route path="/online"            element={<OnlinePage />}      />
           <Route path="/multiplayer-game"  element={<MultiplayerGame />} />
+          <Route path="/privacy"           element={<PrivacyPage />}     />
         </Routes>
       </BrowserRouter>
     </>

@@ -4,6 +4,8 @@ import { getQuestions } from "../data/questions/index.js";
 import Particles from "../components/Particles";
 import { saveLocalStats } from "../utils/stats";
 import { saveGameResult, checkAchievements, dispatchAchievements } from "../utils/achievements";
+import { addXP, calcGameXP } from "../utils/xp";
+import { updateDailyQuestProgress } from "../utils/dailyQuest";
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
 
@@ -221,6 +223,8 @@ export default function Game() {
     saveGameResult(result);
     const unlocked = checkAchievements(result);
     dispatchAchievements(unlocked);
+    addXP(calcGameXP(correctRef.current, wrongRef.current, false));
+    updateDailyQuestProgress(result);
   }, [finished]);
 
   /* ─ Timer ─ */

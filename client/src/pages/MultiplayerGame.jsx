@@ -7,6 +7,8 @@ import Particles from "../components/Particles";
 import { saveLocalStats, saveWeeklyScore } from "../utils/stats";
 import { getJokers, useJoker } from "../utils/jokers";
 import { saveGameResult, checkAchievements, dispatchAchievements } from "../utils/achievements";
+import { addXP, calcGameXP } from "../utils/xp";
+import { updateDailyQuestProgress } from "../utils/dailyQuest";
 
 // Varsayılan süre — location.state'ten ya da question_start'tan override edilir
 const DEFAULT_TIME = 20;
@@ -526,6 +528,8 @@ export default function MultiplayerGame() {
         saveGameResult(result);
         const unlocked = checkAchievements(result);
         dispatchAchievements(unlocked);
+        addXP(calcGameXP(correctRef.current, wrongRef.current, true));
+        updateDailyQuestProgress(result);
       }
       setFinalPlayers(finalP);
       setPhase("finished");

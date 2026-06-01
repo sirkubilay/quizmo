@@ -325,6 +325,99 @@ function AchievementsTab() {
 }
 
 /* ══════════════════════════════
+   ARKADAŞLAR SEKMESİ
+══════════════════════════════ */
+function FriendsTab() {
+  const [friends, setFriends] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("quizmo_friends") || "[]"); } catch { return []; }
+  });
+  const [input, setInput] = useState("");
+  const [error, setError]   = useState("");
+
+  const saveFriends = (list) => {
+    setFriends(list);
+    localStorage.setItem("quizmo_friends", JSON.stringify(list));
+  };
+
+  const handleAdd = () => {
+    const trimmed = input.trim();
+    if (!trimmed || trimmed.length < 2) { setError("En az 2 karakter gir."); return; }
+    if (friends.some(f => f.name.toLowerCase() === trimmed.toLowerCase())) { setError("Bu arkadaş zaten listende."); return; }
+    if (friends.length >= 50) { setError("En fazla 50 arkadaş ekleyebilirsin."); return; }
+    saveFriends([...friends, { name: trimmed, addedAt: Date.now() }]);
+    setInput("");
+    setError("");
+  };
+
+  const handleRemove = (name) => saveFriends(friends.filter(f => f.name !== name));
+
+  const AVATARS = ["😊","🎮","🧠","🌟","🔥","👑","🐉","💎","🦁","🔮","⚡","🌙","🎭","🏆","🦊","🐺","🦋","🌊","🎯","🚀"];
+  const getAvatar = (name) => AVATARS[name.charCodeAt(0) % AVATARS.length];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {/* Ekle */}
+      <div className="glass-card" style={{ padding: "20px" }}>
+        <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "12px" }}>
+          Arkadaş Ekle
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <input
+            type="text"
+            value={input}
+            onChange={e => { setInput(e.target.value); setError(""); }}
+            onKeyDown={e => e.key === "Enter" && handleAdd()}
+            placeholder="Kullanıcı adı gir..."
+            maxLength={20}
+            style={{ flex: 1, background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.15)", borderRadius: "12px", padding: "11px 14px", color: "white", fontFamily: "Nunito, sans-serif", fontSize: "0.92rem", outline: "none", boxSizing: "border-box" }}
+          />
+          <button
+            onClick={handleAdd}
+            style={{ padding: "11px 18px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer" }}
+          >
+            Ekle
+          </button>
+        </div>
+        {error && <div style={{ fontSize: "0.75rem", color: "#fca5a5", marginTop: "8px" }}>{error}</div>}
+      </div>
+
+      {/* Liste */}
+      {friends.length === 0 ? (
+        <div className="glass-card" style={{ padding: "36px", textAlign: "center" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "10px" }}>👥</div>
+          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.9rem" }}>Henüz arkadaş eklemedin.</div>
+        </div>
+      ) : (
+        <div className="glass-card" style={{ padding: "20px" }}>
+          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "14px" }}>
+            {friends.length} Arkadaş
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {friends.map((f) => (
+              <div key={f.name} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 12px", borderRadius: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ fontSize: "1.6rem" }}>{getAvatar(f.name)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{f.name}</div>
+                  <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.3)" }}>
+                    {new Date(f.addedAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })} tarihinde eklendi
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemove(f.name)}
+                  style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "8px", color: "#fca5a5", padding: "5px 10px", cursor: "pointer", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.75rem" }}
+                >
+                  Çıkar
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════
    TEMALAR SEKMESİ
 ══════════════════════════════ */
 function ThemesTab() {
@@ -481,10 +574,11 @@ export default function ProfilePage() {
     && saveState !== "saving";
 
   const TABS = [
-    { id: "profil",     label: "👤 Profil"     },
-    { id: "stats",      label: "📊 İstatistik" },
-    { id: "achievements", label: "🏅 Başarım"  },
-    { id: "themes",     label: "🎨 Tema"       },
+    { id: "profil",       label: "👤 Profil"     },
+    { id: "stats",        label: "📊 İstatistik" },
+    { id: "achievements", label: "🏅 Başarım"    },
+    { id: "friends",      label: "👥 Arkadaşlar" },
+    { id: "themes",       label: "🎨 Tema"       },
   ];
 
   return (
@@ -743,6 +837,7 @@ export default function ProfilePage() {
 
         {activeTab === "stats" && <StatsTab />}
         {activeTab === "achievements" && <AchievementsTab />}
+        {activeTab === "friends" && <FriendsTab />}
         {activeTab === "themes" && <ThemesTab />}
       </div>
     </div>

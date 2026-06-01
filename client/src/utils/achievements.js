@@ -321,10 +321,71 @@ export function checkAchievements(gameResult) {
   if (hour >= 22 || hour < 4)  tryUnlock("gece-oyuncusu");
   if (hour >= 6  && hour < 9)  tryUnlock("sabah-kosusu");
 
+  // Kategori rozetleri (Bronz/Gümüş/Altın)
+  if (gameResult.categoryId) {
+    const cs = stats[gameResult.categoryId];
+    if (cs) {
+      const catBadges = [
+        { threshold: 10,  tier: "bronz"  },
+        { threshold: 25,  tier: "gumus"  },
+        { threshold: 50,  tier: "altin"  },
+        { threshold: 100, tier: "platin" },
+      ];
+      for (const b of catBadges) {
+        if (cs.correct >= b.threshold) {
+          const badgeId = `cat-${gameResult.categoryId}-${b.tier}`;
+          const unlocked2 = getUnlockedAchievements();
+          if (!unlocked2[badgeId]) {
+            unlocked2[badgeId] = Date.now();
+            localStorage.setItem("quizmo_achievements", JSON.stringify(unlocked2));
+            const fake = getCategoryBadge(gameResult.categoryId, b.tier);
+            if (fake) newlyUnlocked.push(fake);
+          }
+        }
+      }
+    }
+  }
+
   return newlyUnlocked;
+}
+
+/* ── Kategori rozet tanımı (dinamik) ── */
+export const BADGE_TIERS = [
+  { tier: "bronz",  label: "Bronz",  emoji: "🥉", color: "#cd7c2f", threshold: 10  },
+  { tier: "gumus",  label: "Gümüş",  emoji: "🥈", color: "#9ca3af", threshold: 25  },
+  { tier: "altin",  label: "Altın",  emoji: "🥇", color: "#fbbf24", threshold: 50  },
+  { tier: "platin", label: "Platin", emoji: "💠", color: "#06b6d4", threshold: 100 },
+];
+
+export function getCategoryBadge(categoryId, tier) {
+  const tierDef = BADGE_TIERS.find((t) => t.tier === tier);
+  if (!tierDef) return null;
+  return {
+    id: `cat-${categoryId}-${tier}`,
+    name: `${tierDef.label} Rozet`,
+    description: `${categoryId} kategorisinde ${tierDef.threshold} doğru cevap`,
+    emoji: tierDef.emoji,
+    color: tierDef.color,
+    isBadge: true,
+    categoryId,
+    tier,
+  };
 }
 
 export function dispatchAchievements(achievements) {
   if (!achievements.length) return;
   window.dispatchEvent(new CustomEvent("quizmo-achievement", { detail: achievements }));
+}
+
+/* Haftalık sıralama ödülü (dışarıdan çağrılır) */
+export function checkLeaderboardReward(rank) {
+  if (rank <= 3) {
+    const unlocked = getUnlockedAchievements();
+    if (!unlocked["hafta-sampiyonu"]) {
+      unlocked["hafta-sampiyonu"] = Date.now();
+      localStorage.setItem("quizmo_achievements", JSON.stringify(unlocked));
+      const ach = ACHIEVEMENTS.find((a) => a.id === "hafta-sampiyonu");
+      if (ach) dispatchAchievements([ach]);
+    }
+  }
 }

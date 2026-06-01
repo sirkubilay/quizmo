@@ -4,6 +4,8 @@ import Particles from "../components/Particles";
 import { getLocalStats, getWeeklyTop3 } from "../utils/stats";
 import { CATEGORIES } from "../data/categories";
 import { THEMES, applyTheme, getSavedThemeId, COLORBLIND_MODES, applyColorblindMode, getSavedColorblindMode } from "../utils/theme";
+import * as xpModule from "../utils/xp";
+import * as dailyQuestModule from "../utils/dailyQuest";
 
 const MENU_ITEMS = [
   {
@@ -112,11 +114,75 @@ function AltayLogo() {
   );
 }
 
+/* ── Hesap Sil Modalı ── */
+function DeleteAccountModal({ onClose }) {
+  const navigate = useNavigate();
+  const [reason, setReason] = useState("");
+  const [deleted, setDeleted] = useState(false);
+
+  const handleDelete = () => {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("quizmo_"));
+    keys.forEach(k => localStorage.removeItem(k));
+    setDeleted(true);
+    setTimeout(() => { navigate("/"); window.location.reload(); }, 2000);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div className="glass-card animate-bounce-in" style={{ maxWidth: "420px", width: "100%", padding: "32px 28px", textAlign: "center" }}>
+        {deleted ? (
+          <>
+            <div style={{ fontSize: "3rem", marginBottom: "12px" }}>✅</div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>Hesabın silindi.</div>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", marginTop: "8px" }}>Yönlendiriliyorsun...</div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: "3rem", marginBottom: "10px" }}>😢</div>
+            <h3 style={{ fontWeight: 900, fontSize: "1.3rem", marginBottom: "6px" }}>Üzgünüz</h3>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "0.88rem", marginBottom: "22px", lineHeight: 1.5 }}>
+              Hesap silme nedeninizi bizimle paylaşır mısınız?
+            </p>
+            <textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Nedeninizi buraya yazabilirsiniz..."
+              rows={3}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                background: "rgba(255,255,255,0.07)", border: "1.5px solid rgba(255,255,255,0.15)",
+                borderRadius: "12px", padding: "12px 14px", color: "white",
+                fontFamily: "Nunito, sans-serif", fontSize: "0.9rem", resize: "vertical",
+                outline: "none", marginBottom: "20px",
+              }}
+            />
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={onClose}
+                style={{ flex: 1, padding: "13px", borderRadius: "12px", border: "1.5px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleDelete}
+                style={{ flex: 1, padding: "13px", borderRadius: "12px", border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer", boxShadow: "0 6px 20px rgba(239,68,68,0.4)" }}
+              >
+                🗑️ Hesabı Sil
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Ayarlar Paneli ── */
 function SettingsPanel({ onClose }) {
-  const [activeTheme,     setActiveTheme]     = useState(getSavedThemeId());
+  const [activeTheme,      setActiveTheme]      = useState(getSavedThemeId());
   const [activeColorblind, setActiveColorblind] = useState(getSavedColorblindMode());
-  const [settingsTab,     setSettingsTab]     = useState("tema");
+  const [openSection,      setOpenSection]      = useState(null);
+  const [showDelete,       setShowDelete]       = useState(false);
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -127,148 +193,117 @@ function SettingsPanel({ onClose }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
-  const handleTheme = (id) => {
-    setActiveTheme(id);
-    applyTheme(id);
-  };
+  const toggle = (id) => setOpenSection(v => v === id ? null : id);
 
-  const handleColorblind = (id) => {
-    setActiveColorblind(id);
-    applyColorblindMode(id);
+  const CB_DESCS = {
+    none:         "Standart renkler",
+    protanopia:   "Kırmızı-yeşil (kırmızı zayıf)",
+    deuteranopia: "Kırmızı-yeşil (yeşil zayıf)",
+    tritanopia:   "Mavi-sarı renk körlüğü",
+    grayscale:    "Tüm renkler griye dönüşür",
   };
 
   return (
-    <div
-      ref={panelRef}
-      style={{
-        position: "fixed",
-        top: "68px",
-        right: "16px",
-        width: "min(360px, calc(100vw - 32px))",
-        background: "rgba(15,12,41,0.97)",
-        border: "1px solid rgba(255,255,255,0.14)",
-        borderRadius: "22px",
-        backdropFilter: "blur(30px)",
-        boxShadow: "0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.2)",
-        zIndex: 9000,
-        overflow: "hidden",
-        animation: "settings-drop 0.28s cubic-bezier(0.34,1.56,0.64,1)",
-      }}
-    >
-      <style>{`
-        @keyframes settings-drop {
-          from { opacity: 0; transform: translateY(-14px) scale(0.95); }
-          to   { opacity: 1; transform: translateY(0)     scale(1);    }
-        }
-      `}</style>
+    <>
+      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} />}
+      <div
+        ref={panelRef}
+        style={{
+          position: "fixed", top: "68px", right: "16px",
+          width: "min(360px, calc(100vw - 32px))",
+          background: "rgba(15,12,41,0.97)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: "22px", backdropFilter: "blur(30px)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          zIndex: 9000, overflow: "hidden",
+          animation: "settings-drop 0.28s cubic-bezier(0.34,1.56,0.64,1)",
+        }}
+      >
+        <style>{`@keyframes settings-drop { from{opacity:0;transform:translateY(-14px) scale(0.95)} to{opacity:1;transform:translateY(0) scale(1)} }`}</style>
 
-      {/* Panel header */}
-      <div style={{ padding: "18px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontWeight: 800, fontSize: "1rem" }}>⚙️ Ayarlar</div>
-        <button
-          onClick={onClose}
-          style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "28px", height: "28px", cursor: "pointer", fontSize: "0.9rem" }}
-        >✕</button>
-      </div>
+        {/* Header */}
+        <div style={{ padding: "18px 20px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem" }}>⚙️ Ayarlar</div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "28px", height: "28px", cursor: "pointer", fontSize: "0.9rem" }}>✕</button>
+        </div>
 
-      {/* İç tab bar */}
-      <div style={{ display: "flex", gap: "6px", padding: "14px 16px 0" }}>
-        {[{ id: "tema", label: "🎨 Tema" }, { id: "erisim", label: "👁️ Erişim" }].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setSettingsTab(t.id)}
-            style={{
-              flex: 1, padding: "8px", borderRadius: "10px", cursor: "pointer",
-              border: settingsTab === t.id ? "none" : "1px solid rgba(255,255,255,0.1)",
-              background: settingsTab === t.id ? "linear-gradient(135deg,#7c3aed,#6366f1)" : "rgba(255,255,255,0.05)",
-              color: settingsTab === t.id ? "white" : "rgba(255,255,255,0.5)",
-              fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.8rem",
-              transition: "all 0.2s",
-            }}
-          >{t.label}</button>
-        ))}
-      </div>
+        <div style={{ maxHeight: "75vh", overflowY: "auto" }}>
 
-      <div style={{ padding: "14px 16px 18px", maxHeight: "70vh", overflowY: "auto" }}>
-
-        {/* TEMA SEKMESİ */}
-        {settingsTab === "tema" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {THEMES.map((theme) => {
-              const sel = activeTheme === theme.id;
-              return (
-                <button
-                  key={theme.id}
-                  onClick={() => handleTheme(theme.id)}
-                  style={{
-                    width: "100%", padding: 0, borderRadius: "14px", overflow: "hidden",
-                    border: `2px solid ${sel ? theme.accent : "rgba(255,255,255,0.08)"}`,
-                    cursor: "pointer", transition: "all 0.25s",
-                    boxShadow: sel ? `0 0 18px ${theme.accent}44` : "none",
-                    transform: sel ? "scale(1.015)" : "scale(1)",
-                  }}
-                >
-                  <div style={{ height: "52px", background: theme.gradient, display: "flex", alignItems: "center", padding: "0 14px", gap: "10px", position: "relative" }}>
-                    <span style={{ fontSize: "1.4rem" }}>{theme.emoji}</span>
-                    <span style={{ fontWeight: 800, fontSize: "0.92rem", color: "white" }}>{theme.name}</span>
-                    <div style={{ marginLeft: "auto", display: "flex", gap: "5px" }}>
-                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: theme.accent }} />
-                      <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: theme.accent2 }} />
-                    </div>
-                    {sel && (
-                      <div style={{ position: "absolute", right: "40px", top: "50%", transform: "translateY(-50%)", width: "20px", height: "20px", borderRadius: "50%", background: theme.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900 }}>✓</div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ERİŞİLEBİLİRLİK SEKMESİ */}
-        {settingsTab === "erisim" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
-              Renk Körlüğü Modu
-            </div>
-            {COLORBLIND_MODES.map((mode) => {
-              const sel = activeColorblind === mode.id;
-              return (
-                <button
-                  key={mode.id}
-                  onClick={() => handleColorblind(mode.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "12px",
-                    padding: "12px 14px", borderRadius: "12px", cursor: "pointer",
-                    border: `1.5px solid ${sel ? "#7c3aed" : "rgba(255,255,255,0.08)"}`,
-                    background: sel ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.04)",
-                    transition: "all 0.2s", width: "100%",
-                    fontFamily: "Nunito, sans-serif",
-                  }}
-                >
-                  <span style={{ fontSize: "1.4rem" }}>{mode.emoji}</span>
-                  <div style={{ flex: 1, textAlign: "left" }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "white" }}>{mode.name}</div>
-                    {mode.id === "none" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Standart renkler</div>}
-                    {mode.id === "protanopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Kırmızı-yeşil (kırmızı zayıf)</div>}
-                    {mode.id === "deuteranopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Kırmızı-yeşil (yeşil zayıf)</div>}
-                    {mode.id === "tritanopia" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Mavi-sarı renk körlüğü</div>}
-                    {mode.id === "grayscale" && <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>Tüm renkler griye dönüşür</div>}
-                  </div>
-                  {sel && <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>}
-                </button>
-              );
-            })}
-
-            <div style={{ marginTop: "8px", padding: "12px 14px", borderRadius: "12px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>
-                💡 Renk körlüğü modu tüm oyun ekranlarını etkiler. Doğru/yanlış renkleri, grafikler ve arayüz unsurları seçilen moda göre görünür.
+          {/* ── Temalar accordion ── */}
+          <div style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <button
+              onClick={() => toggle("tema")}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "none", border: "none", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}
+            >
+              <span>🎨 Temalar</span>
+              <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", transition: "transform 0.2s", transform: openSection === "tema" ? "rotate(180deg)" : "none" }}>▼</span>
+            </button>
+            {openSection === "tema" && (
+              <div style={{ padding: "0 12px 14px", display: "flex", flexDirection: "column", gap: "7px" }}>
+                {THEMES.map((theme) => {
+                  const sel = activeTheme === theme.id;
+                  return (
+                    <button key={theme.id} onClick={() => { setActiveTheme(theme.id); applyTheme(theme.id); }}
+                      style={{ width: "100%", padding: 0, borderRadius: "12px", overflow: "hidden", border: `2px solid ${sel ? theme.accent : "rgba(255,255,255,0.08)"}`, cursor: "pointer", transition: "all 0.2s", boxShadow: sel ? `0 0 14px ${theme.accent}44` : "none" }}
+                    >
+                      <div style={{ height: "46px", background: theme.gradient, display: "flex", alignItems: "center", padding: "0 12px", gap: "8px" }}>
+                        <span style={{ fontSize: "1.2rem" }}>{theme.emoji}</span>
+                        <span style={{ fontWeight: 800, fontSize: "0.88rem", color: "white", flex: 1 }}>{theme.name}</span>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <div style={{ width: "13px", height: "13px", borderRadius: "50%", background: theme.accent }} />
+                          <div style={{ width: "13px", height: "13px", borderRadius: "50%", background: theme.accent2 }} />
+                        </div>
+                        {sel && <span style={{ fontSize: "0.8rem", marginLeft: "4px" }}>✓</span>}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* ── Erişilebilirlik accordion ── */}
+          <div style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <button
+              onClick={() => toggle("erisim")}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "none", border: "none", color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}
+            >
+              <span>👁️ Erişilebilirlik</span>
+              <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", transition: "transform 0.2s", transform: openSection === "erisim" ? "rotate(180deg)" : "none" }}>▼</span>
+            </button>
+            {openSection === "erisim" && (
+              <div style={{ padding: "0 12px 14px", display: "flex", flexDirection: "column", gap: "7px" }}>
+                {COLORBLIND_MODES.map((mode) => {
+                  const sel = activeColorblind === mode.id;
+                  return (
+                    <button key={mode.id} onClick={() => { setActiveColorblind(mode.id); applyColorblindMode(mode.id); }}
+                      style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "11px", cursor: "pointer", border: `1.5px solid ${sel ? "#7c3aed" : "rgba(255,255,255,0.08)"}`, background: sel ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.04)", width: "100%", fontFamily: "Nunito, sans-serif", transition: "all 0.2s" }}
+                    >
+                      <span style={{ fontSize: "1.3rem" }}>{mode.emoji}</span>
+                      <div style={{ flex: 1, textAlign: "left" }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "white" }}>{mode.name}</div>
+                        <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>{CB_DESCS[mode.id]}</div>
+                      </div>
+                      {sel && <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", color: "white", fontWeight: 900 }}>✓</div>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Hesabımı Sil ── */}
+          <div style={{ padding: "14px 20px 18px" }}>
+            <button
+              onClick={() => { onClose(); setTimeout(() => setShowDelete(true), 100); }}
+              style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "1.5px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}
+            >
+              🗑️ Hesabımı Sil
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -288,10 +323,28 @@ export default function HomePage() {
   const [top3,         setTop3]         = useState([]);
   const [localStats,   setLocalStats]   = useState({});
   const [showSettings, setShowSettings] = useState(false);
+  const [showDelete,   setShowDelete]   = useState(false);
+  const [xpData,       setXpData]       = useState({ total: 0, level: 1, current: 0, max: 500 });
+  const [dailyQuest,   setDailyQuest]   = useState(null);
+  const [questDef,     setQuestDef]     = useState(null);
+
+  const playerName = localStorage.getItem("quizmo_profile_name") || "";
+  const playerAvatar = localStorage.getItem("quizmo_profile_avatar") || "🧠";
 
   useEffect(() => {
     setLocalStats(getLocalStats());
     getWeeklyTop3().then(setTop3).catch(() => {});
+
+    const { getTotalXP, getLevel, getLevelProgress, getLevelTitle } = xpModule;
+    const total   = getTotalXP();
+    const level   = getLevel(total);
+    const prog    = getLevelProgress(total);
+    setXpData({ total, level, current: prog.current, max: prog.max, title: getLevelTitle(level) });
+
+    const quest = dailyQuestModule.getDailyQuest();
+    const def   = quest ? dailyQuestModule.getQuestDef(quest.questId) : null;
+    setDailyQuest(quest);
+    setQuestDef(def);
   }, []);
 
   return (
@@ -302,6 +355,38 @@ export default function HomePage() {
       {/* Arka plan ışıkları */}
       <div style={{ position: "fixed", top: "-20%", left: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
       <div style={{ position: "fixed", bottom: "-20%", right: "-10%", width: "600px", height: "600px", borderRadius: "50%", background: "radial-gradient(circle, rgba(236,72,153,0.15) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
+
+      {/* Sol üst XP widget */}
+      <div
+        onClick={() => navigate("/profile")}
+        style={{
+          position: "fixed", top: "12px", left: "12px", zIndex: 8999,
+          background: "rgba(15,12,41,0.88)", backdropFilter: "blur(16px)",
+          border: "1.5px solid rgba(255,255,255,0.12)", borderRadius: "18px",
+          padding: "8px 14px 8px 10px", cursor: "pointer",
+          display: "flex", alignItems: "center", gap: "10px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
+          maxWidth: "200px", transition: "all 0.2s",
+        }}
+      >
+        <div style={{ fontSize: "1.8rem", lineHeight: 1 }}>{playerAvatar}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90px" }}>
+              {playerName || "Misafir"}
+            </span>
+            <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#c084fc", background: "rgba(124,58,237,0.25)", padding: "1px 6px", borderRadius: "8px", flexShrink: 0 }}>
+              Lv.{xpData.level}
+            </span>
+          </div>
+          <div style={{ marginTop: "4px", height: "5px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.round((xpData.current / xpData.max) * 100)}%`, background: "linear-gradient(90deg,#7c3aed,#ec4899)", borderRadius: "3px", transition: "width 0.8s ease" }} />
+          </div>
+          <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.3)", marginTop: "2px" }}>
+            {xpData.current}/{xpData.max} XP
+          </div>
+        </div>
+      </div>
 
       {/* Sağ üst ⚙️ butonu */}
       <button
@@ -373,6 +458,38 @@ export default function HomePage() {
             Quizmo
           </h1>
         </div>
+
+        {/* ── Günlük Görev ── */}
+        {dailyQuest && questDef && (
+          <div style={{ width: "100%" }} className="animate-slide-up">
+            <div className="glass-card" style={{
+              padding: "16px 20px",
+              background: dailyQuest.completed
+                ? "linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.08))"
+                : "linear-gradient(135deg,rgba(251,191,36,0.12),rgba(245,158,11,0.06))",
+              border: `1.5px solid ${dailyQuest.completed ? "rgba(16,185,129,0.4)" : "rgba(251,191,36,0.3)"}`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ fontSize: "1.8rem" }}>{dailyQuest.completed ? "✅" : questDef.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 800, color: dailyQuest.completed ? "#6ee7b7" : "#fbbf24", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+                      🌟 Günlük Görev
+                    </span>
+                    {dailyQuest.completed && <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#6ee7b7" }}>TAMAMLANDI</span>}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "white" }}>{questDef.text}</div>
+                  <div style={{ marginTop: "6px", height: "5px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${Math.min((dailyQuest.progress / questDef.goal) * 100, 100)}%`, background: dailyQuest.completed ? "#10b981" : "#fbbf24", borderRadius: "3px", transition: "width 0.8s ease" }} />
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "3px" }}>
+                    {dailyQuest.progress}/{questDef.goal} · Ödül: +{questDef.xp} XP
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Menü Kartları ── */}
         <div className="home-grid">
@@ -609,11 +726,24 @@ export default function HomePage() {
         })()}
 
         {/* ── Footer ── */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingBottom: "10px" }}>
-          <AltayLogo />
-          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "1px" }}>
-            ALTAY INTERACTIVE
-          </span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", paddingBottom: "10px", width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <AltayLogo />
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "1px" }}>
+              ALTAY INTERACTIVE
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <button
+              onClick={() => navigate("/privacy")}
+              style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: "0.78rem", cursor: "pointer", fontFamily: "Nunito, sans-serif", textDecoration: "underline", padding: 0 }}
+            >
+              Gizlilik Sözleşmesi
+            </button>
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.18)", fontSize: "0.72rem" }}>
+            © 2026 Quizmo. Tüm hakları saklıdır.
+          </div>
         </div>
       </div>
     </div>
