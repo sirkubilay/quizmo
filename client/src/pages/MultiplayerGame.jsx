@@ -6,6 +6,7 @@ import socket from "../socket";
 import Particles from "../components/Particles";
 import { saveLocalStats, saveWeeklyScore } from "../utils/stats";
 import { getJokers, useJoker } from "../utils/jokers";
+import { saveGameResult, checkAchievements, dispatchAchievements } from "../utils/achievements";
 
 // Varsayılan süre — location.state'ten ya da question_start'tan override edilir
 const DEFAULT_TIME = 20;
@@ -219,6 +220,18 @@ function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematc
   const trophy  = myRank === 1 ? "🏆" : myRank === 2 ? "🥈" : myRank === 3 ? "🥉" : "🎮";
   const msg     = myRank === 1 ? "Tebrikler, kazandın!" : myRank <= 3 ? "Harika iş!" : "İyi oynadın!";
 
+  const [copied, setCopied] = useState(false);
+  const handleShare = async () => {
+    const text = `${trophy} Multiplayer Quiz\n${myRank}. sıra · ${myP?.score || 0} puan\n\nQuizmo'da oyna!`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "Quizmo Sonucu", text }); } catch {}
+    } else {
+      navigator.clipboard.writeText(text).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", animation: "mp-fadein 0.5s ease" }}>
 
@@ -303,6 +316,20 @@ function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematc
           ))}
         </div>
       </div>
+
+      {/* Paylaş */}
+      <button
+        onClick={handleShare}
+        style={{
+          padding: "13px", borderRadius: "14px",
+          border: "1.5px solid rgba(255,255,255,0.15)",
+          background: copied ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.07)",
+          color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700,
+          fontSize: "0.95rem", cursor: "pointer", transition: "all 0.2s",
+        }}
+      >
+        {copied ? "✅ Kopyalandı!" : "📤 Sonucu Paylaş"}
+      </button>
 
       {/* Yeniden Oyna */}
       {onRematch && (
@@ -481,10 +508,24 @@ export default function MultiplayerGame() {
 
     const onGameOver = ({ players: finalP }) => {
       clearInterval(timerRef.current);
+      const sorted   = [...finalP].sort((a, b) => b.score - a.score);
       const myPlayer = finalP.find(p => p.id === socket.id);
       if (myPlayer) {
         saveWeeklyScore(myPlayer.name, myPlayer.score);
         saveLocalStats(categoryId, correctRef.current, wrongRef.current);
+        const myRank = sorted.findIndex(p => p.id === socket.id) + 1;
+        const result = {
+          categoryId,
+          correct: correctRef.current,
+          wrong:   wrongRef.current,
+          score:   myPlayer.score,
+          isMultiplayer: true,
+          rank: myRank,
+          allJokersUsed: false,
+        };
+        saveGameResult(result);
+        const unlocked = checkAchievements(result);
+        dispatchAchievements(unlocked);
       }
       setFinalPlayers(finalP);
       setPhase("finished");

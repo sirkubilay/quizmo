@@ -15,11 +15,12 @@
   --text-muted: #94a3b8;
   --card-bg: rgba(255, 255, 255, 0.05);
   --card-border: rgba(255, 255, 255, 0.1);
+  --body-bg: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
 }
 
 body {
   font-family: 'Nunito', sans-serif;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  background: var(--body-bg);
   min-height: 100vh;
   color: var(--text);
   overflow-x: hidden;

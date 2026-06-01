@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getQuestions } from "../data/questions/index.js";
 import Particles from "../components/Particles";
 import { saveLocalStats } from "../utils/stats";
+import { saveGameResult, checkAchievements, dispatchAchievements } from "../utils/achievements";
 
 function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
 
@@ -96,10 +97,23 @@ function JokerBtn({ icon, label, color, used, active, onClick, disabled }) {
    SONUÇ EKRANI
 ══════════════════════════════ */
 function ResultScreen({ score, questions, maxScore, category, onRestart, onHome }) {
-  const pct  = maxScore ? Math.round((score / maxScore) * 100) : 0;
-  const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "🥈" : pct >= 40 ? "😊" : "📚";
-  const msg   = pct >= 80 ? "Mükemmel!" : pct >= 60 ? "Harika iş!" : pct >= 40 ? "Fena değil!" : "Daha çok çalış!";
+  const pct      = maxScore ? Math.round((score / maxScore) * 100) : 0;
+  const emoji    = pct >= 80 ? "🏆" : pct >= 60 ? "🥈" : pct >= 40 ? "😊" : "📚";
+  const msg      = pct >= 80 ? "Mükemmel!" : pct >= 60 ? "Harika iş!" : pct >= 40 ? "Fena değil!" : "Daha çok çalış!";
   const barColor = pct >= 80 ? "#10b981" : pct >= 60 ? "#6366f1" : pct >= 40 ? "#f59e0b" : "#ef4444";
+
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const text = `${emoji} ${category?.icon || ""} ${category?.name || "Quiz"}\n🎯 ${score} puan · %${pct} başarı\n\nQuizmo'da oyna!`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "Quizmo Sonucu", text }); } catch {}
+    } else {
+      navigator.clipboard.writeText(text).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -109,7 +123,7 @@ function ResultScreen({ score, questions, maxScore, category, onRestart, onHome 
         <h2 style={{ fontWeight: 900, fontSize: "2rem", marginBottom: "6px", background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{msg}</h2>
         <p style={{ color: "rgba(255,255,255,0.45)", marginBottom: "30px", fontSize: "0.9rem" }}>{category?.icon} {category?.name}</p>
 
-        <div style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.18), rgba(99,102,241,0.12))", border: "1px solid rgba(124,58,237,0.35)", borderRadius: "20px", padding: "28px", marginBottom: "28px" }}>
+        <div style={{ background: "linear-gradient(135deg, rgba(124,58,237,0.18), rgba(99,102,241,0.12))", border: "1px solid rgba(124,58,237,0.35)", borderRadius: "20px", padding: "28px", marginBottom: "20px" }}>
           <div style={{ fontSize: "3.2rem", fontWeight: 900, background: "linear-gradient(135deg,#c084fc,#818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}>{score}</div>
           <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.82rem", marginTop: "4px" }}>/ {maxScore} puan</div>
           <div style={{ margin: "18px 0 10px", height: "10px", background: "rgba(255,255,255,0.08)", borderRadius: "5px", overflow: "hidden" }}>
@@ -117,6 +131,20 @@ function ResultScreen({ score, questions, maxScore, category, onRestart, onHome 
           </div>
           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>%{pct} başarı oranı</div>
         </div>
+
+        {/* Paylaş */}
+        <button
+          onClick={handleShare}
+          style={{
+            width: "100%", marginBottom: "12px", padding: "13px",
+            borderRadius: "14px", border: "1.5px solid rgba(255,255,255,0.15)",
+            background: copied ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.07)",
+            color: "white", fontFamily: "Nunito, sans-serif", fontWeight: 700,
+            fontSize: "0.95rem", cursor: "pointer", transition: "all 0.2s",
+          }}
+        >
+          {copied ? "✅ Kopyalandı!" : "📤 Sonucu Paylaş"}
+        </button>
 
         <div style={{ display: "flex", gap: "12px" }}>
           <button className="btn-secondary" onClick={onHome}    style={{ flex: 1, padding: "14px", borderRadius: "14px", fontSize: "0.95rem" }}>🏠 Ana Menü</button>
@@ -166,6 +194,7 @@ export default function Game() {
   const [dblPtActive,  setDblPtActive]  = useState(false);
 
   const timerRef = useRef(null);
+  const fastAnswersRef = useRef(0);
 
   /* ─ Soruları yükle ─ */
   useEffect(() => {
@@ -176,10 +205,22 @@ export default function Game() {
     setLoading(false);
   }, []);
 
-  /* ─ Oyun bitince istatistikleri kaydet ─ */
+  /* ─ Oyun bitince istatistik + achievement kaydet ─ */
   useEffect(() => {
     if (!finished || !category?.id) return;
     saveLocalStats(category.id, correctRef.current, wrongRef.current);
+    const result = {
+      categoryId: category.id,
+      correct: correctRef.current,
+      wrong: wrongRef.current,
+      score,
+      isMultiplayer: false,
+      allJokersUsed: fiftyUsed && dblAnsUsed && dblPtUsed,
+      fastAnswers: fastAnswersRef.current,
+    };
+    saveGameResult(result);
+    const unlocked = checkAchievements(result);
+    dispatchAchievements(unlocked);
   }, [finished]);
 
   /* ─ Timer ─ */
@@ -252,6 +293,7 @@ export default function Game() {
       const pts = Math.max(timeLeft * 10, 10) * (dblPtActive ? 2 : 1);
       setScore(s => s + pts);
       correctRef.current++;
+      if (timeLeft <= 10) fastAnswersRef.current++;
     } else {
       wrongRef.current++;
     }

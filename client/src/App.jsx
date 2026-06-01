@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import CategorySelect from "./pages/CategorySelect";
@@ -11,13 +11,20 @@ import ProfilePage from "./pages/ProfilePage";
 import OnlinePage from "./pages/OnlinePage";
 import MultiplayerGame from "./pages/MultiplayerGame";
 import SplashScreen from "./components/SplashScreen";
+import AchievementToast from "./components/AchievementToast";
+import { applyTheme, getSavedThemeId } from "./utils/theme";
 
 export default function App() {
   const [splash, setSplash] = useState(true);
 
+  useEffect(() => {
+    applyTheme(getSavedThemeId());
+  }, []);
+
   return (
     <>
       {splash && <SplashScreen onDone={() => setSplash(false)} />}
+      <AchievementToast />
 
       <BrowserRouter>
         <Routes>
