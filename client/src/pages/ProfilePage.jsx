@@ -404,9 +404,9 @@ function FriendsTab() {
 }
 
 /* ══════════════════════════════
-   PREMIUM YAZI TİPLERİ
+   YAZI TİPİ MODAL
 ══════════════════════════════ */
-function FontsSection() {
+function FontModal({ onClose }) {
   const [activeFont, setActiveFont] = useState(getSavedFontId());
 
   const handleSelect = (fontId) => {
@@ -415,53 +415,95 @@ function FontsSection() {
   };
 
   return (
-    <div className="glass-card" style={{ padding: "22px", marginBottom: "24px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          ✍️ Yazı Tipi
-        </span>
-        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#fbbf24", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "20px", padding: "2px 9px" }}>
-          DEMO
-        </span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {FONTS.map((font) => {
-          const selected = activeFont === font.id;
-          return (
-            <button
-              key={font.id}
-              onClick={() => handleSelect(font.id)}
-              style={{
-                display: "flex", alignItems: "center", gap: "12px",
-                padding: "12px 16px", borderRadius: "14px", cursor: "pointer",
-                border: `1.5px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.1)"}`,
-                background: selected
-                  ? "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(99,102,241,0.1))"
-                  : "rgba(255,255,255,0.04)",
-                transition: "all 0.2s",
-                width: "100%",
-                boxShadow: selected ? "0 4px 16px rgba(124,58,237,0.25)" : "none",
-              }}
-            >
-              <div style={{ flex: 1, textAlign: "left" }}>
-                <div style={{ fontFamily: font.family, fontWeight: 700, fontSize: "1rem", color: "white" }}>
-                  {font.preview}
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex", alignItems: "flex-end", justifyContent: "center",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: "600px",
+          background: "rgba(15,12,41,0.98)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderTopLeftRadius: "28px", borderTopRightRadius: "28px",
+          padding: "24px 20px 36px",
+          boxShadow: "0 -24px 60px rgba(0,0,0,0.7)",
+          animation: "sheet-up 0.32s cubic-bezier(0.34,1.3,0.64,1)",
+          maxHeight: "80vh", overflowY: "auto",
+        }}
+      >
+        <style>{`@keyframes sheet-up { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }`}</style>
+
+        {/* Handle + başlık */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "22px" }}>
+          <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.2)", marginBottom: "18px" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>✍️ Yazı Tipi</div>
+              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>Tüm oyun yazılarına yansır</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#fbbf24", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "20px", padding: "3px 10px" }}>
+                DEMO
+              </span>
+              <button
+                onClick={onClose}
+                style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "30px", height: "30px", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Font listesi */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {FONTS.map((font) => {
+            const selected = activeFont === font.id;
+            return (
+              <button
+                key={font.id}
+                onClick={() => handleSelect(font.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "14px",
+                  padding: "14px 16px", borderRadius: "16px", cursor: "pointer",
+                  border: `1.5px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.09)"}`,
+                  background: selected
+                    ? "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(99,102,241,0.1))"
+                    : "rgba(255,255,255,0.04)",
+                  transition: "all 0.18s",
+                  width: "100%",
+                  boxShadow: selected ? "0 4px 16px rgba(124,58,237,0.25)" : "none",
+                  transform: selected ? "scale(1.01)" : "scale(1)",
+                }}
+              >
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontFamily: font.family, fontWeight: 700, fontSize: "1.05rem", color: "white", lineHeight: 1.3 }}>
+                    {font.preview}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", fontFamily: "Nunito, sans-serif" }}>{font.name}</span>
+                    {font.premium && (
+                      <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "#fbbf24" }}>✦ Premium</span>
+                    )}
+                    {!font.premium && (
+                      <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "#10b981" }}>✓ Ücretsiz</span>
+                    )}
+                  </div>
                 </div>
-                <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginTop: "2px", fontFamily: "Nunito, sans-serif" }}>
-                  {font.name}
-                  {font.premium && <span style={{ marginLeft: "6px", color: "#fbbf24", fontWeight: 700 }}>✦ Premium</span>}
-                </div>
-              </div>
-              {selected && (
-                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>
-              )}
-            </button>
-          );
-        })}
+                {selected && (
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)", margin: "14px 0 0", textAlign: "center" }}>
-        Premium yazı tipleri yakında satın alınabilecek ✨
-      </p>
     </div>
   );
 }
@@ -534,7 +576,8 @@ function ThemesTab() {
 ══════════════════════════════ */
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("profil");
+  const [activeTab,      setActiveTab]      = useState("profil");
+  const [showFontModal,  setShowFontModal]  = useState(false);
 
   const [name,   setName  ] = useState(() => localStorage.getItem("quizmo_profile_name")   || "");
   const [avatar, setAvatar] = useState(() => localStorage.getItem("quizmo_profile_avatar") || "😊");
@@ -613,6 +656,7 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
+      {showFontModal && <FontModal onClose={() => setShowFontModal(false)} />}
       <Particles />
 
       <div style={{ position: "fixed", top: "-20%", right: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
@@ -690,6 +734,28 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+              {/* Yazı tipi butonu */}
+              <button
+                onClick={() => setShowFontModal(true)}
+                style={{
+                  marginTop: "4px",
+                  padding: "8px 18px",
+                  borderRadius: "20px",
+                  border: "1.5px solid rgba(251,191,36,0.35)",
+                  background: "rgba(251,191,36,0.1)",
+                  color: "#fcd34d",
+                  fontFamily: "Nunito, sans-serif",
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  transition: "all 0.2s",
+                }}
+              >
+                ✍️ Yazı Tipi
+              </button>
             </div>
 
             {/* Kullanıcı Adı */}
@@ -808,9 +874,6 @@ export default function ProfilePage() {
                 Premium karakterler yakında satın alınabilecek ✨
               </p>
             </div>
-
-            {/* Premium Yazı Tipleri */}
-            <FontsSection />
 
           </>
         )}
