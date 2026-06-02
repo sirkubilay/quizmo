@@ -5,8 +5,9 @@ import { getLocalStats } from "../utils/stats";
 import { CATEGORIES } from "../data/categories";
 import { ACHIEVEMENTS, getUnlockedAchievements, getGameHistory } from "../utils/achievements";
 import { THEMES, applyTheme, getSavedThemeId } from "../utils/theme";
-import { FONTS, applyFont, getSavedFontId } from "../utils/font";
+import { NAME_STYLES, getSavedNameStyleId, saveNameStyleId, getNameStyleById } from "../utils/nameStyle";
 import PlayerAvatar from "../components/PlayerAvatar";
+import PlayerName from "../components/PlayerName";
 import { FREE_AVATARS, PREMIUM_AVATARS, getAvatarMeta, isPremium as checkPremium } from "../data/avatars";
 
 
@@ -404,22 +405,15 @@ function FriendsTab() {
 }
 
 /* ══════════════════════════════
-   YAZI TİPİ MODAL
+   İSİM STİLİ MODAL
 ══════════════════════════════ */
-function FontModal({ onClose }) {
-  const [activeFont, setActiveFont] = useState(getSavedFontId());
-
-  const handleSelect = (fontId) => {
-    setActiveFont(fontId);
-    applyFont(fontId);
-  };
-
+function NameStyleModal({ playerName, activeStyleId, onSelect, onClose }) {
   return (
     <div
       onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 99999,
-        background: "rgba(0,0,0,0.6)",
+        background: "rgba(0,0,0,0.65)",
         display: "flex", alignItems: "flex-end", justifyContent: "center",
         backdropFilter: "blur(4px)",
       }}
@@ -431,73 +425,73 @@ function FontModal({ onClose }) {
           background: "rgba(15,12,41,0.98)",
           border: "1px solid rgba(255,255,255,0.12)",
           borderTopLeftRadius: "28px", borderTopRightRadius: "28px",
-          padding: "24px 20px 36px",
+          padding: "24px 20px 40px",
           boxShadow: "0 -24px 60px rgba(0,0,0,0.7)",
           animation: "sheet-up 0.32s cubic-bezier(0.34,1.3,0.64,1)",
-          maxHeight: "80vh", overflowY: "auto",
+          maxHeight: "82vh", overflowY: "auto",
         }}
       >
         <style>{`@keyframes sheet-up { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }`}</style>
 
-        {/* Handle + başlık */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "22px" }}>
-          <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.2)", marginBottom: "18px" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>✍️ Yazı Tipi</div>
-              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>Tüm oyun yazılarına yansır</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#fbbf24", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "20px", padding: "3px 10px" }}>
-                DEMO
-              </span>
-              <button
-                onClick={onClose}
-                style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "30px", height: "30px", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
+        {/* Handle */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+          <div style={{ width: "40px", height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.18)" }} />
         </div>
 
-        {/* Font listesi */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {FONTS.map((font) => {
-            const selected = activeFont === font.id;
+        {/* Başlık */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: "1.1rem" }}>✨ İsim Stili</div>
+            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", marginTop: "2px" }}>Kullanıcı adının görünüşünü seç</div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: "8px", color: "white", width: "30px", height: "30px", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Stil grid — 2 kolon */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          {NAME_STYLES.map((ns) => {
+            const selected = activeStyleId === ns.id;
             return (
               <button
-                key={font.id}
-                onClick={() => handleSelect(font.id)}
+                key={ns.id}
+                onClick={() => onSelect(ns.id)}
                 style={{
-                  display: "flex", alignItems: "center", gap: "14px",
-                  padding: "14px 16px", borderRadius: "16px", cursor: "pointer",
-                  border: `1.5px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.09)"}`,
+                  padding: "14px 12px",
+                  borderRadius: "16px",
+                  cursor: "pointer",
+                  border: `2px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.09)"}`,
                   background: selected
-                    ? "linear-gradient(135deg, rgba(124,58,237,0.22), rgba(99,102,241,0.1))"
+                    ? "linear-gradient(135deg, rgba(124,58,237,0.25), rgba(99,102,241,0.1))"
                     : "rgba(255,255,255,0.04)",
                   transition: "all 0.18s",
-                  width: "100%",
-                  boxShadow: selected ? "0 4px 16px rgba(124,58,237,0.25)" : "none",
-                  transform: selected ? "scale(1.01)" : "scale(1)",
+                  boxShadow: selected ? "0 4px 18px rgba(124,58,237,0.3)" : "none",
+                  transform: selected ? "scale(1.03)" : "scale(1)",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
                 }}
               >
-                <div style={{ flex: 1, textAlign: "left" }}>
-                  <div style={{ fontFamily: font.family, fontWeight: 700, fontSize: "1.05rem", color: "white", lineHeight: 1.3 }}>
-                    {font.preview}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px" }}>
-                    <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", fontFamily: "Nunito, sans-serif" }}>{font.name}</span>
-                    {font.premium && (
-                      <span style={{ fontSize: "0.6rem", fontWeight: 800, color: "#fbbf24" }}>✦ Premium</span>
-                    )}
-                    {!font.premium && (
-                      <span style={{ fontSize: "0.6rem", fontWeight: 700, color: "#10b981" }}>✓ Ücretsiz</span>
-                    )}
-                  </div>
+                {/* İsim önizlemesi — kullanıcının gerçek adıyla */}
+                <span style={{
+                  display: "inline-block",
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  lineHeight: 1.3,
+                  ...ns.style,
+                  ...(Object.keys(ns.style).length === 0 ? { color: "white" } : {}),
+                }}>
+                  {playerName || "Kahraman"}
+                </span>
+                {/* Stil adı */}
+                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "0.85rem" }}>{ns.emoji}</span>
+                  <span style={{ fontSize: "0.7rem", color: selected ? "#c4b5fd" : "rgba(255,255,255,0.45)", fontWeight: 700 }}>{ns.name}</span>
                 </div>
                 {selected && (
-                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>
+                  <div style={{ position: "absolute", top: "6px", right: "8px", fontSize: "0.65rem", color: "#c4b5fd", fontWeight: 900 }}>✓</div>
                 )}
               </button>
             );
@@ -576,8 +570,9 @@ function ThemesTab() {
 ══════════════════════════════ */
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [activeTab,      setActiveTab]      = useState("profil");
-  const [showFontModal,  setShowFontModal]  = useState(false);
+  const [activeTab,       setActiveTab]      = useState("profil");
+  const [showNameStyle,   setShowNameStyle]  = useState(false);
+  const [nameStyleId,     setNameStyleId]    = useState(getSavedNameStyleId);
 
   const [name,   setName  ] = useState(() => localStorage.getItem("quizmo_profile_name")   || "");
   const [avatar, setAvatar] = useState(() => localStorage.getItem("quizmo_profile_avatar") || "😊");
@@ -656,7 +651,14 @@ export default function ProfilePage() {
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}>
-      {showFontModal && <FontModal onClose={() => setShowFontModal(false)} />}
+      {showNameStyle && (
+        <NameStyleModal
+          playerName={name.trim() || "Kahraman"}
+          activeStyleId={nameStyleId}
+          onSelect={(id) => { setNameStyleId(id); saveNameStyleId(id); }}
+          onClose={() => setShowNameStyle(false)}
+        />
+      )}
       <Particles />
 
       <div style={{ position: "fixed", top: "-20%", right: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 70%)", pointerEvents: "none", zIndex: 0 }} />
@@ -724,9 +726,11 @@ export default function ProfilePage() {
             >
               <PlayerAvatar emoji={avatar} size={90} float={isPremium} style={{ borderRadius: "50%" }} />
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "white" }}>
-                  {name.trim() || "İsimsiz Kahraman"}
-                </div>
+                <PlayerName
+                  name={name.trim() || "İsimsiz Kahraman"}
+                  styleId={nameStyleId}
+                  style={{ fontWeight: 800, fontSize: "1.15rem" }}
+                />
                 <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.35)", marginTop: "3px" }}>
                   {currentMeta?.name || ""}
                   {isPremium && (
@@ -734,16 +738,16 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-              {/* Yazı tipi butonu */}
+              {/* İsim stili butonu */}
               <button
-                onClick={() => setShowFontModal(true)}
+                onClick={() => setShowNameStyle(true)}
                 style={{
                   marginTop: "4px",
                   padding: "8px 18px",
                   borderRadius: "20px",
-                  border: "1.5px solid rgba(251,191,36,0.35)",
-                  background: "rgba(251,191,36,0.1)",
-                  color: "#fcd34d",
+                  border: "1.5px solid rgba(167,139,250,0.4)",
+                  background: "rgba(124,58,237,0.12)",
+                  color: "#c4b5fd",
                   fontFamily: "Nunito, sans-serif",
                   fontWeight: 700,
                   fontSize: "0.78rem",
@@ -754,7 +758,7 @@ export default function ProfilePage() {
                   transition: "all 0.2s",
                 }}
               >
-                ✍️ Yazı Tipi
+                ✨ İsim Stili
               </button>
             </div>
 

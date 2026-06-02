@@ -4,6 +4,7 @@ import { CATEGORIES } from "../data/categories";
 import { getQuestions } from "../data/questions/index.js";
 import socket from "../socket";
 import Particles from "../components/Particles";
+import PlayerName from "../components/PlayerName";
 import { saveLocalStats, saveWeeklyScore } from "../utils/stats";
 import { getJokers, useJoker } from "../utils/jokers";
 import { saveGameResult, checkAchievements, dispatchAchievements } from "../utils/achievements";
@@ -251,7 +252,7 @@ function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematc
         </h2>
         {myP && (
           <p style={{ color: "rgba(255,255,255,0.4)", margin: 0, fontSize: "0.9rem" }}>
-            <strong style={{ color: "white" }}>{myP.name}</strong>
+            <PlayerName name={myP.name} style={{ fontWeight: 700 }} />
             {" · "}
             <strong style={{ color: "#c084fc" }}>{myP.score} puan</strong>
             {" · "}
@@ -297,7 +298,10 @@ function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematc
               </div>
 
               <div style={{ flex: 1, fontWeight: 700, fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "8px" }}>
-                {p.name}
+                {p.id === myId
+                  ? <PlayerName name={p.name} style={{ fontWeight: 700, fontSize: "0.95rem" }} />
+                  : p.name
+                }
                 {p.id === myId && (
                   <span style={{
                     fontSize: "0.68rem", background: "rgba(124,58,237,0.3)",

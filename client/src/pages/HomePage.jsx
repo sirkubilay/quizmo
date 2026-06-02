@@ -7,6 +7,7 @@ import { THEMES, applyTheme, getSavedThemeId, COLORBLIND_MODES, applyColorblindM
 import * as xpModule from "../utils/xp";
 import * as dailyQuestModule from "../utils/dailyQuest";
 import PlayerAvatar from "../components/PlayerAvatar";
+import PlayerName from "../components/PlayerName";
 
 const MENU_ITEMS = [
   {
@@ -386,9 +387,10 @@ export default function HomePage() {
         <PlayerAvatar emoji={playerAvatar} size={40} shimmer={false} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontWeight: 800, fontSize: "0.82rem", color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90px" }}>
-              {playerName || "Misafir"}
-            </span>
+            <PlayerName
+              name={playerName || "Misafir"}
+              style={{ fontWeight: 800, fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "90px" }}
+            />
             <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#c084fc", background: "rgba(124,58,237,0.25)", padding: "1px 6px", borderRadius: "8px", flexShrink: 0 }}>
               Lv.{xpData.level}
             </span>
