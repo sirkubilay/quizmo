@@ -98,11 +98,13 @@ function JokerBtn({ icon, label, color, used, active, onClick, disabled }) {
 /* ══════════════════════════════
    SONUÇ EKRANI
 ══════════════════════════════ */
-function ResultScreen({ score, questions, maxScore, category, onRestart, onHome }) {
+function ResultScreen({ score, questions, maxScore, category, onRestart, onHome, earnedXP, correctCount, wrongCount }) {
   const pct      = maxScore ? Math.round((score / maxScore) * 100) : 0;
   const emoji    = pct >= 80 ? "🏆" : pct >= 60 ? "🥈" : pct >= 40 ? "😊" : "📚";
   const msg      = pct >= 80 ? "Mükemmel!" : pct >= 60 ? "Harika iş!" : pct >= 40 ? "Fena değil!" : "Daha çok çalış!";
   const barColor = pct >= 80 ? "#10b981" : pct >= 60 ? "#6366f1" : pct >= 40 ? "#f59e0b" : "#ef4444";
+  const total    = (correctCount || 0) + (wrongCount || 0);
+  const xpBonus  = total >= 10 ? 30 : 10;
 
   const [copied, setCopied] = useState(false);
 
@@ -133,6 +135,19 @@ function ResultScreen({ score, questions, maxScore, category, onRestart, onHome 
           </div>
           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>%{pct} başarı oranı</div>
         </div>
+
+        {/* XP Kazanımı */}
+        {earnedXP > 0 && (
+          <div style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: "16px", padding: "16px 18px", marginBottom: "14px", display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "1.8rem" }}>⚡</span>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#fcd34d" }}>+{earnedXP} XP Kazandın!</div>
+              <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginTop: "3px" }}>
+                {correctCount} doğru × 15 = +{(correctCount || 0) * 15} · Tamamlama: +{xpBonus}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Paylaş */}
         <button
@@ -354,7 +369,8 @@ export default function Game() {
 
   if (finished) {
     const maxScore = questions.length * 200;
-    return <ResultScreen score={score} questions={questions} maxScore={maxScore} category={category} onRestart={() => navigate("/solo")} onHome={() => navigate("/")} />;
+    const earnedXP = calcGameXP(correctRef.current, wrongRef.current, false);
+    return <ResultScreen score={score} questions={questions} maxScore={maxScore} category={category} onRestart={() => navigate("/solo")} onHome={() => navigate("/")} earnedXP={earnedXP} correctCount={correctRef.current} wrongCount={wrongRef.current} />;
   }
 
   /* ─ Aktif soru ─ */

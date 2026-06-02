@@ -14,6 +14,7 @@ import SplashScreen from "./components/SplashScreen";
 import PrivacyPage from "./pages/PrivacyPage";
 import AchievementToast from "./components/AchievementToast";
 import { applyTheme, getSavedThemeId, applyColorblindMode, getSavedColorblindMode } from "./utils/theme";
+import { applyFont, getSavedFontId } from "./utils/font";
 
 /* SVG color-matrix filters for colorblind simulation */
 function ColorblindFilters() {
@@ -52,6 +53,7 @@ export default function App() {
   useEffect(() => {
     applyTheme(getSavedThemeId());
     applyColorblindMode(getSavedColorblindMode());
+    applyFont(getSavedFontId());
   }, []);
 
   return (

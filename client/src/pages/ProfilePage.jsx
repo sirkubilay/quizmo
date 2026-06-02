@@ -5,6 +5,7 @@ import { getLocalStats } from "../utils/stats";
 import { CATEGORIES } from "../data/categories";
 import { ACHIEVEMENTS, getUnlockedAchievements, getGameHistory } from "../utils/achievements";
 import { THEMES, applyTheme, getSavedThemeId } from "../utils/theme";
+import { FONTS, applyFont, getSavedFontId } from "../utils/font";
 import PlayerAvatar from "../components/PlayerAvatar";
 import { FREE_AVATARS, PREMIUM_AVATARS, getAvatarMeta, isPremium as checkPremium } from "../data/avatars";
 
@@ -30,15 +31,26 @@ const PERIODS = [
   { id: "all",     label: "Tümü",      ms: Infinity },
 ];
 
+const MODES = [
+  { id: "all",    label: "Tümü",        icon: "🎮" },
+  { id: "solo",   label: "Tek Oyuncu",  icon: "👤" },
+  { id: "online", label: "Online",      icon: "🌐" },
+];
+
 function StatsTab() {
   const [period, setPeriod] = useState("all");
+  const [mode,   setMode]   = useState("all");
   const allHistory = getGameHistory();
 
   const now     = Date.now();
   const periodMs = PERIODS.find((p) => p.id === period)?.ms ?? Infinity;
-  const history  = periodMs === Infinity
+  const byPeriod = periodMs === Infinity
     ? allHistory
     : allHistory.filter((g) => now - g.date <= periodMs);
+
+  const history = mode === "all"    ? byPeriod
+    : mode === "solo"               ? byPeriod.filter((g) => !g.isMultiplayer)
+    :                                 byPeriod.filter((g) =>  g.isMultiplayer);
 
   // Kategori istatistiklerini history'den türet (periyoda göre doğru)
   const catMap = {};
@@ -100,6 +112,34 @@ function StatsTab() {
         ))}
       </div>
 
+      {/* Mod seçici */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            style={{
+              flex: 1,
+              padding: "9px 4px",
+              borderRadius: "12px",
+              border: mode === m.id ? "none" : "1px solid rgba(255,255,255,0.1)",
+              background: mode === m.id
+                ? "linear-gradient(135deg, #0ea5e9, #6366f1)"
+                : "rgba(255,255,255,0.05)",
+              color: mode === m.id ? "white" : "rgba(255,255,255,0.45)",
+              fontFamily: "Nunito, sans-serif",
+              fontWeight: 700,
+              fontSize: "0.75rem",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              boxShadow: mode === m.id ? "0 4px 14px rgba(14,165,233,0.35)" : "none",
+            }}
+          >
+            {m.icon} {m.label}
+          </button>
+        ))}
+      </div>
+
       {/* Özet kartlar */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
         {[
@@ -149,7 +189,7 @@ function StatsTab() {
         <div className="glass-card" style={{ padding: "40px", textAlign: "center" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>🎮</div>
           <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.9rem" }}>
-            {period === "all" ? "Henüz oyun oynamadın." : "Bu dönemde oyun bulunamadı."}<br />
+            {period === "all" && mode === "all" ? "Henüz oyun oynamadın." : "Bu filtrelerle oyun bulunamadı."}<br />
             İstatistikler burada görünecek!
           </div>
         </div>
@@ -173,7 +213,7 @@ function StatsTab() {
                   <span style={{ fontSize: "1.3rem" }}>{cat?.icon || "🎮"}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>{cat?.name || g.categoryId}</div>
-                    <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>{date} · {g.isMultiplayer ? "Çok oyunculu" : "Tek oyunculu"}</div>
+                    <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>{date} · {g.isMultiplayer ? "🌐 Online" : "👤 Tek oyunculu"}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontWeight: 800, fontSize: "0.92rem", color }}>{g.correct}/{total}</div>
@@ -359,6 +399,69 @@ function FriendsTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════
+   PREMIUM YAZI TİPLERİ
+══════════════════════════════ */
+function FontsSection() {
+  const [activeFont, setActiveFont] = useState(getSavedFontId());
+
+  const handleSelect = (fontId) => {
+    setActiveFont(fontId);
+    applyFont(fontId);
+  };
+
+  return (
+    <div className="glass-card" style={{ padding: "22px", marginBottom: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          ✍️ Yazı Tipi
+        </span>
+        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "#fbbf24", background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: "20px", padding: "2px 9px" }}>
+          DEMO
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {FONTS.map((font) => {
+          const selected = activeFont === font.id;
+          return (
+            <button
+              key={font.id}
+              onClick={() => handleSelect(font.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: "12px",
+                padding: "12px 16px", borderRadius: "14px", cursor: "pointer",
+                border: `1.5px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.1)"}`,
+                background: selected
+                  ? "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(99,102,241,0.1))"
+                  : "rgba(255,255,255,0.04)",
+                transition: "all 0.2s",
+                width: "100%",
+                boxShadow: selected ? "0 4px 16px rgba(124,58,237,0.25)" : "none",
+              }}
+            >
+              <div style={{ flex: 1, textAlign: "left" }}>
+                <div style={{ fontFamily: font.family, fontWeight: 700, fontSize: "1rem", color: "white" }}>
+                  {font.preview}
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginTop: "2px", fontFamily: "Nunito, sans-serif" }}>
+                  {font.name}
+                  {font.premium && <span style={{ marginLeft: "6px", color: "#fbbf24", fontWeight: 700 }}>✦ Premium</span>}
+                </div>
+              </div>
+              {selected && (
+                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.6rem", color: "white", fontWeight: 900, flexShrink: 0 }}>✓</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)", margin: "14px 0 0", textAlign: "center" }}>
+        Premium yazı tipleri yakında satın alınabilecek ✨
+      </p>
     </div>
   );
 }
@@ -575,7 +678,7 @@ export default function ProfilePage() {
                 background: "linear-gradient(135deg, rgba(124,58,237,0.12), rgba(6,182,212,0.08))",
               }}
             >
-              <PlayerAvatar emoji={avatar} size={90} float={true} style={{ borderRadius: "50%" }} />
+              <PlayerAvatar emoji={avatar} size={90} float={isPremium} style={{ borderRadius: "50%" }} />
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.15rem", color: "white" }}>
                   {name.trim() || "İsimsiz Kahraman"}
@@ -705,6 +808,9 @@ export default function ProfilePage() {
                 Premium karakterler yakında satın alınabilecek ✨
               </p>
             </div>
+
+            {/* Premium Yazı Tipleri */}
+            <FontsSection />
 
           </>
         )}

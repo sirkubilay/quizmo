@@ -214,7 +214,7 @@ function QuestionResults({ correctAnswer, results, players, myId, isLast }) {
 /* ══════════════════════════════
    GAME OVER / FİNAL SIRALAMASI
 ══════════════════════════════ */
-function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematchInfo }) {
+function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematchInfo, earnedXP, correctCount, wrongCount }) {
   const sorted  = [...players].sort((a, b) => b.score - a.score);
   const myRank  = sorted.findIndex(p => p.id === myId) + 1;
   const myP     = sorted.find(p => p.id === myId);
@@ -319,6 +319,19 @@ function GameOverScreen({ players, myId, onHome, onRematch, rematchVoted, rematc
         </div>
       </div>
 
+      {/* XP Kazanımı */}
+      {earnedXP > 0 && (
+        <div style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: "16px", padding: "16px 18px", display: "flex", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontSize: "1.8rem" }}>⚡</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#fcd34d" }}>+{earnedXP} XP Kazandın!</div>
+            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginTop: "3px" }}>
+              {correctCount} doğru × 15 = +{(correctCount || 0) * 15} · Online bonus: +20
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Paylaş */}
       <button
         onClick={handleShare}
@@ -409,6 +422,9 @@ export default function MultiplayerGame() {
 
   /* ─ Oyun sonu ─ */
   const [finalPlayers, setFinalPlayers] = useState([]);
+  const [earnedXP,     setEarnedXP]     = useState(0);
+  const [myCorrect,    setMyCorrect]    = useState(0);
+  const [myWrong,      setMyWrong]      = useState(0);
 
   /* ─ Rematch ─ */
   const [rematchVoted, setRematchVoted] = useState(false);
@@ -540,7 +556,11 @@ export default function MultiplayerGame() {
         saveGameResult(result);
         const unlocked = checkAchievements(result);
         dispatchAchievements(unlocked);
-        addXP(calcGameXP(correctRef.current, wrongRef.current, true));
+        const xp = calcGameXP(correctRef.current, wrongRef.current, true);
+        addXP(xp);
+        setEarnedXP(xp);
+        setMyCorrect(correctRef.current);
+        setMyWrong(wrongRef.current);
         updateDailyQuestProgress(result);
       }
       setFinalPlayers(finalP);
@@ -775,6 +795,9 @@ export default function MultiplayerGame() {
             onRematch={handleRematch}
             rematchVoted={rematchVoted}
             rematchInfo={rematchInfo}
+            earnedXP={earnedXP}
+            correctCount={myCorrect}
+            wrongCount={myWrong}
           />
         </div>
       </div>

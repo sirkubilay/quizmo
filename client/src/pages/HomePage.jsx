@@ -295,7 +295,7 @@ function SettingsPanel({ onClose, onDeleteRequest }) {
           <div style={{ padding: "14px 20px 18px" }}>
             <button
               onClick={() => { onClose(); onDeleteRequest(); }}
-              style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "1.5px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}
+              style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "2px solid rgba(239,68,68,0.6)", background: "rgba(239,68,68,0.2)", color: "#fca5a5", fontFamily: "Nunito, sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}
             >
               🗑️ Hesabımı Sil
             </button>
